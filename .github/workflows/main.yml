@@ -1,0 +1,111 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, feature/* ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  ASPNETCORE_ENVIRONMENT: Production
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Verify Docker and Docker Compose
+      run: |
+        docker --version
+        docker-compose --version
+        docker ps
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --configuration Release --no-restore
+
+    - name: Run tests
+      run: dotnet test --configuration Release --no-build --verbosity normal
+
+    - name: Build Docker images
+      run: docker-compose -f "docker-compose.yml" build
+
+    - name: Test Docker Compose configuration
+      run: docker-compose -f "docker-compose.yml" config
+
+    - name: Run integration tests
+      run: |
+        # Start services for integration testing
+        docker-compose -f "docker-compose.yml" up -d
+        # Wait for services to be ready
+        timeout /t 30 /nobreak
+        # Run integration tests here if you have them
+        # dotnet test --filter "Category=Integration"
+        # Cleanup
+        docker-compose -f "docker-compose.yml" down
+
+  deploy:
+    name: Deploy to Production
+    runs-on: windows-latest
+    needs: build-and-test
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to production
+      run: |
+        Write-Host "🔄 Starting deployment process on Windows..."
+        # Windows-specific deployment commands
+        # Examples for Windows deployment:
+        
+        # For IIS deployment:
+        # dotnet publish -c Release -o ./publish
+        # Copy-Item -Path ./publish/* -Destination "C:\inetpub\wwwroot\" -Recurse -Force
+        
+        # For Docker deployment to Windows container registry:
+        # docker-compose push
+        # docker stack deploy -c docker-compose.yml myapp
+        
+        # For Azure App Service (Windows):
+        # dotnet publish -c Release
+        # Compress-Archive -Path "./bin/Release/net8.0/publish/*" -DestinationPath "./deploy.zip" -Force
+        
+        Write-Host "✅ Deployment completed successfully (placeholder, deployment not set up yet)"
+
+  notify:
+    name: Notify Status
+    runs-on: windows-latest
+    needs: [build-and-test, deploy]
+    if: always()
+    
+    steps:
+    - name: Notify build status
+      run: |
+        if ("${{ needs.build-and-test.result }}" -eq "success") {
+          Write-Host "✅ Build and tests passed"
+        } else {
+          Write-Host "❌ Build or tests failed"
+        }
+        
+        if ("${{ needs.deploy.result }}" -eq "success") {
+          Write-Host "✅ Deployment completed"
+        } elseif ("${{ needs.deploy.result }}" -eq "skipped") {
+          Write-Host "⏭️ Deployment skipped (not main branch)"
+        } else {
+          Write-Host "❌ Deployment failed"
+        }
