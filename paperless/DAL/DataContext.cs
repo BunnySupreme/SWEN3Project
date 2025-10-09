@@ -1,0 +1,24 @@
+﻿using Microsoft.EntityFrameworkCore;
+using paperless.DAL.Models;
+
+namespace paperless.DAL
+{
+    public class DataContext : DbContext
+    {
+        #region DbSets
+        public DbSet<Document> Documents { get; set; }
+        #endregion
+
+        #region Builders
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+        {
+            optionsBuilder.UseNpgsql(Configuration.Instance.ConnectionString);
+            base.OnConfiguring(optionsBuilder);
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+        }
+    }
+}
