@@ -34,18 +34,23 @@ jobs:
 
     - name: Restore dependencies
       run: dotnet restore
+      working-directory: ./paperless
 
     - name: Build solution
       run: dotnet build --configuration Release --no-restore
+      working-directory: ./paperless
 
     - name: Run tests
       run: dotnet test --configuration Release --no-build --verbosity normal
+      working-directory: ./paperless
 
     - name: Build Docker images
       run: docker compose -f "docker-compose.yml" build
+      working-directory: ./paperless
 
     - name: Test Docker Compose configuration
       run: docker compose -f "docker-compose.yml" config
+      working-directory: ./paperless
 
     - name: Run integration tests
       run: |
@@ -57,6 +62,7 @@ jobs:
         # dotnet test --filter "Category=Integration"
         # Cleanup
         docker compose -f "docker-compose.yml" down
+      working-directory: ./paperless
 
   deploy:
     name: Deploy to Production
@@ -87,6 +93,7 @@ jobs:
         # Compress-Archive -Path "./bin/Release/net8.0/publish/*" -DestinationPath "./deploy.zip" -Force
         
         Write-Host "✅ Deployment completed successfully (placeholder, deployment not set up yet)"
+      working-directory: ./paperless
 
   notify:
     name: Notify Status
