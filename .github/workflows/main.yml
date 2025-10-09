@@ -104,16 +104,16 @@ jobs:
     steps:
     - name: Notify build status
       run: |
-        if ("${{ needs.build-and-test.result }}" -eq "success") {
-          Write-Host "✅ Build and tests passed"
-        } else {
-          Write-Host "❌ Build or tests failed"
-        }
-        
-        if ("${{ needs.deploy.result }}" -eq "success") {
-          Write-Host "✅ Deployment completed"
-        } elseif ("${{ needs.deploy.result }}" -eq "skipped") {
-          Write-Host "⏭️ Deployment skipped (not main branch)"
-        } else {
-          Write-Host "❌ Deployment failed"
-        }
+        if [ "${{ needs.build-and-test.result }}" = "success" ]; then
+          echo "✅ Build and tests passed"
+        else
+          echo "❌ Build or tests failed"
+        fi
+    
+        if [ "${{ needs.deploy.result }}" = "success" ]; then
+          echo "✅ Deployment completed"
+        elif [ "${{ needs.deploy.result }}" = "skipped" ]; then
+          echo "⏭️ Deployment skipped (not main branch)"
+        else
+          echo "❌ Deployment failed"
+        fi
