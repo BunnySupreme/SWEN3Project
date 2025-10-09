@@ -62,7 +62,7 @@ jobs:
         # dotnet test --filter "Category=Integration"
         # Cleanup
         docker compose -f "docker-compose.yml" down
-      working-directory: ./paperless
+      working-directory: .
 
   deploy:
     name: Deploy to Production
