@@ -29,7 +29,7 @@ jobs:
     - name: Verify Docker and Docker Compose
       run: |
         docker --version
-        docker-compose --version
+        docker compose version
         docker ps
 
     - name: Restore dependencies
@@ -42,21 +42,21 @@ jobs:
       run: dotnet test --configuration Release --no-build --verbosity normal
 
     - name: Build Docker images
-      run: docker-compose -f "docker-compose.yml" build
+      run: docker compose -f "docker-compose.yml" build
 
     - name: Test Docker Compose configuration
-      run: docker-compose -f "docker-compose.yml" config
+      run: docker compose -f "docker-compose.yml" config
 
     - name: Run integration tests
       run: |
         # Start services for integration testing
-        docker-compose -f "docker-compose.yml" up -d
+        docker compose -f "docker-compose.yml" up -d
         # Wait for services to be ready
         timeout /t 30 /nobreak
         # Run integration tests here if you have them
         # dotnet test --filter "Category=Integration"
         # Cleanup
-        docker-compose -f "docker-compose.yml" down
+        docker compose -f "docker-compose.yml" down
 
   deploy:
     name: Deploy to Production
