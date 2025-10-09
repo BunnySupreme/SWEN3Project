@@ -18,10 +18,7 @@ namespace paperless.DAL.Repositories
             }
             else
             {
-                dbDocument.Title = document.Title;
-                dbDocument.Content = document.Content;
-                dbDocument.Summary = document.Summary;
-                dbDocument.Tags = document.Tags;
+                dbDocument.Update(document.Title, document.Content, document.Summary, document.Tags);
             }
             db.SaveChanges();
         }
