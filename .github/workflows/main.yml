@@ -46,11 +46,11 @@ jobs:
 
     - name: Build Docker images
       run: docker compose -f "docker-compose.yml" build
-      working-directory: ./paperless
+      working-directory: .
 
     - name: Test Docker Compose configuration
       run: docker compose -f "docker-compose.yml" config
-      working-directory: ./paperless
+      working-directory: .
 
     - name: Run integration tests
       run: |
