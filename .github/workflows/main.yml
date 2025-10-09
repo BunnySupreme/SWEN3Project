@@ -76,7 +76,7 @@ jobs:
 
     - name: Deploy to production
       run: |
-        Write-Host "🔄 Starting deployment process on Windows..."
+        echo "🔄 Starting deployment process on Windows..."
         # Windows-specific deployment commands
         # Examples for Windows deployment:
         
@@ -92,7 +92,7 @@ jobs:
         # dotnet publish -c Release
         # Compress-Archive -Path "./bin/Release/net8.0/publish/*" -DestinationPath "./deploy.zip" -Force
         
-        Write-Host "✅ Deployment completed successfully (placeholder, deployment not set up yet)"
+        echo "✅ Deployment completed successfully (placeholder, deployment not set up yet)"
       working-directory: ./paperless
 
   notify:
