@@ -57,7 +57,7 @@ jobs:
         # Start services for integration testing
         docker compose -f "docker-compose.yml" up -d
         # Wait for services to be ready
-        timeout /t 30 /nobreak
+        sleep 30
         # Run integration tests here if you have them
         # dotnet test --filter "Category=Integration"
         # Cleanup
