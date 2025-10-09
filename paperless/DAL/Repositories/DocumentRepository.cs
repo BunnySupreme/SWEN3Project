@@ -9,9 +9,20 @@ namespace paperless.DAL.Repositories
         #endregion
 
         #region CRUD Operations
-        public void Create(DataContext db, Document document) // If duplicate documents are unwanted, have method look for title or content and refuse creation if they already exist
+        public void CreateOrUpdate(DataContext db, Document document)
         {
-            db.Documents.Add(document);
+            Document? dbDocument = db.Documents.FirstOrDefault(d => d.Id == document.Id);
+            if (dbDocument == null)
+            {
+                db.Documents.Add(document);
+            }
+            else
+            {
+                dbDocument.Title = document.Title;
+                dbDocument.Content = document.Content;
+                dbDocument.Summary = document.Summary;
+                dbDocument.Tags = document.Tags;
+            }
             db.SaveChanges();
         }
 
@@ -25,9 +36,11 @@ namespace paperless.DAL.Repositories
             return db.Documents.FirstOrDefault(d => d.Id == id);
         }
 
-        public Document? ReadByTitle(DataContext db, string title)
+        public List<Document> ReadByTitle(DataContext db, string title)
         {
-            return db.Documents.FirstOrDefault(d => d.Title == title);
+            return db.Documents
+                .Where(d => d.Title.Contains(title))
+                .ToList();
         }
 
         public void DeleteAll(DataContext db)
@@ -39,16 +52,6 @@ namespace paperless.DAL.Repositories
         public void DeleteById(DataContext db, Guid id)
         {
             Document? document = db.Documents.FirstOrDefault(d => d.Id == id);
-            if (document != null)
-            {
-                db.Documents.Remove(document);
-                db.SaveChanges();
-            }
-        }
-
-        public void DeleteByTitle(DataContext db, string title)
-        {
-            Document? document = db.Documents.FirstOrDefault(d => d.Title == title);
             if (document != null)
             {
                 db.Documents.Remove(document);
