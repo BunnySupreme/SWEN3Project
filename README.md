@@ -17,3 +17,6 @@ Sebastian & Felix
 1. Install-Package Microsoft.EntityFrameworkCore.Tools
 2. Add-Migration MigrationName
 3. Update-Database
+
+## HTTP Request Testing
+1. code --install-extension humao.rest-client
