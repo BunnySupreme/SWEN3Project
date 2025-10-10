@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace paperless.DAL.Models
 {
-    [Table("documents")][PrimaryKey("id")]
+    [Table("documents")][PrimaryKey("Id")]
     public class Document
     {
         #region Constructors
