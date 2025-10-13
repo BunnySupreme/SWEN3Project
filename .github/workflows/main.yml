@@ -65,6 +65,8 @@ jobs:
         docker compose -f "docker-compose.yml" up -d
         # Wait for services to be ready
         sleep 30
+        # Apply database migration
+        # dotnet ef database update --project ./paperless/paperless.csproj
         # Integration tests once present
         # dotnet test --filter "Category=Integration"
         # Cleanup
