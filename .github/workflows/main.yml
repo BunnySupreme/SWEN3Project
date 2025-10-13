@@ -26,6 +26,7 @@ jobs:
         echo "${{ secrets.POSTGRES_PASSWORD }}" > postgres_password.txt
         echo "${{ secrets.RABBIT_PASSWORD }}" > rabbit_password.txt
         echo "${{ secrets.MINIO_PASSWORD }}" > minio_password.txt
+
       working-directory: .
 
     - name: Setup .NET
