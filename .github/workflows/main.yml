@@ -21,6 +21,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Create password files
+      run: |
+        echo "${{ secrets.POSTGRES_PASSWORD }}" > postgres_password.txt
+        echo "${{ secrets.RABBIT_PASSWORD }}" > rabbit_password.txt
+        echo "${{ secrets.MINIO_PASSWORD }}" > minio_password.txt
+      working-directory: .
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
@@ -58,7 +65,9 @@ jobs:
         docker compose -f "docker-compose.yml" up -d
         # Wait for services to be ready
         sleep 30
-        # Run integration tests here if you have them
+        # Apply database migration
+        # dotnet ef database update --project ./paperless/paperless.csproj
+        # Integration tests once present
         # dotnet test --filter "Category=Integration"
         # Cleanup
         docker compose -f "docker-compose.yml" down
@@ -75,25 +84,8 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Deploy to production
-      run: |
-        echo "🔄 Starting deployment process on Windows..."
-        # Windows-specific deployment commands
-        # Examples for Windows deployment:
-        
-        # For IIS deployment:
-        # dotnet publish -c Release -o ./publish
-        # Copy-Item -Path ./publish/* -Destination "C:\inetpub\wwwroot\" -Recurse -Force
-        
-        # For Docker deployment to Windows container registry:
-        # docker-compose push
-        # docker stack deploy -c docker-compose.yml myapp
-        
-        # For Azure App Service (Windows):
-        # dotnet publish -c Release
-        # Compress-Archive -Path "./bin/Release/net8.0/publish/*" -DestinationPath "./deploy.zip" -Force
-        
-        echo "✅ Deployment completed successfully (placeholder, deployment not set up yet)"
-      working-directory: ./paperless
+      run: docker compose -f "docker-compose.yml" up -d
+      working-directory: .
 
   notify:
     name: Notify Status
