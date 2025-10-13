@@ -83,7 +83,7 @@ jobs:
 
     - name: Deploy to production
       run: docker compose -f "docker-compose.yml" up -d
-      working-directory: ./paperless
+      working-directory: .
 
   notify:
     name: Notify Status
