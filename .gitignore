@@ -402,3 +402,6 @@ FodyWeavers.xsd
 
 # EF Migrations
 Migrations/
+
+# Secrets
+*_password.txt

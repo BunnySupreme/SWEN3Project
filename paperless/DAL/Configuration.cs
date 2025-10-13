@@ -1,44 +1,26 @@
-﻿using System.Text.Json;
-
-namespace paperless.DAL
+﻿namespace paperless.DAL
 {
     public class Configuration
     {
-        #region Configuration
-        private const string _FILENAME = @"C:\Dev\configs\SWEN3Project\swen3project.config";
-        #endregion
-
         #region Properties
-        public string ConnectionString { get; set; } = String.Empty;
-        #endregion
-
-        #region Instance
-        private static Configuration? _instance = null;
-        public static Configuration Instance
-        {
-            get
-            {
-                if (_instance == null)
-                {
-                    if (File.Exists(_FILENAME))
-                    {
-                        _instance = JsonSerializer.Deserialize<Configuration>(File.ReadAllText(_FILENAME));
-                    }
-                    if (_instance == null)
-                    { 
-                        _instance = new Configuration();
-                    }
-                }
-                return _instance;
-            }
-        }
+        public static string PostgresConnectionString => GetPostgresConnectionString();
         #endregion
 
         #region Methods
-        public void Save()
+        private static string GetPostgresConnectionString()
         {
-            File.WriteAllText(_FILENAME, JsonSerializer.Serialize(this));
-        }   
+            try
+            {
+                string passwordPath = Path.Combine(AppContext.BaseDirectory, "postgres_password.txt");
+                string password = File.ReadAllText(passwordPath).Trim();
+                return $"Host=postgres;Port=5432;Database=paperlessdb;Username=paperless;Password={password}";
+            }
+            catch (Exception ex)
+            {
+                // Add logging here
+                throw new Exception("ERROR: Could not find/read postgres password file:", ex);
+            }
+        }
         #endregion
     }
 }

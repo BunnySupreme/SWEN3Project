@@ -12,7 +12,7 @@ namespace paperless.DAL
         #region Builders
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseNpgsql(Configuration.Instance.ConnectionString);
+            optionsBuilder.UseNpgsql(Configuration.PostgresConnectionString);
             base.OnConfiguring(optionsBuilder);
         }
 
