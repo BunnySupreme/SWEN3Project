@@ -399,3 +399,9 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+# EF Migrations
+Migrations/
+
+# Secrets
+*_password.txt
