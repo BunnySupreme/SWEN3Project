@@ -47,15 +47,12 @@ public class DocumentServiceTests
     [Fact]
     public async Task GetAsync_ShouldReturnDto_WhenFound()
     {
-        // Arrange
         var doc = new Document();
         doc.Update("Some File", "c", "s", "t");
         _repoMock.Setup(r => r.ReadById(doc.Id)).Returns(doc);
 
-        // Act
         var result = await _service.GetAsync(doc.Id, CancellationToken.None);
 
-        // Assert
         result.Should().NotBeNull();
         result!.FileName.Should().Be("Some File");
     }
@@ -63,13 +60,10 @@ public class DocumentServiceTests
     [Fact]
     public async Task CreateAsync_ShouldCallRepositoryAndReturnDto()
     {
-        // Arrange
         var createDto = new DocumentCreateDto("NewFile", "application/pdf", "sum", new List<string> { "tag1" });
 
-        // Act
         var result = await _service.CreateAsync(createDto, CancellationToken.None);
 
-        // Assert
         _repoMock.Verify(r => r.CreateOrUpdate(It.IsAny<Document>()), Times.Once);
         result.FileName.Should().Be("NewFile");
     }
@@ -77,7 +71,6 @@ public class DocumentServiceTests
     [Fact]
     public async Task UpdateAsync_ShouldReturnTrue_WhenDocumentExists()
     {
-        // Arrange
         var existing = new Document();
         existing.Update("Old", "c", "s", "t");
 
@@ -85,10 +78,8 @@ public class DocumentServiceTests
 
         var dto = new DocumentUpdateDto(existing.Id, "Updated", "application/pdf", "new summary", new List<string> { "tagX" });
 
-        // Act
         var result = await _service.UpdateAsync(dto, CancellationToken.None);
 
-        // Assert
         result.Should().BeTrue();
         _repoMock.Verify(r => r.CreateOrUpdate(It.Is<Document>(d => d.Title == "Updated")), Times.Once);
     }
@@ -96,18 +87,15 @@ public class DocumentServiceTests
     [Fact]
     public async Task DeleteAsync_ShouldCallDeleteById()
     {
-        // Arrange
         var id = Guid.NewGuid();
         var doc = new Document();
-        typeof(Document).GetProperty(nameof(Document.Id))!.SetValue(doc, id); // optional if Id is used internally
+        typeof(Document).GetProperty(nameof(Document.Id))!.SetValue(doc, id);
 
         _repoMock.Setup(r => r.ReadById(id)).Returns(doc);
-        _repoMock.Setup(r => r.DeleteById(id)); // void method; setup not required but harmless
+        _repoMock.Setup(r => r.DeleteById(id));
 
-        // Act
         var result = await _service.DeleteAsync(id, CancellationToken.None);
 
-        // Assert
         result.Should().BeTrue();
         _repoMock.Verify(r => r.DeleteById(id), Times.Once);
     }
