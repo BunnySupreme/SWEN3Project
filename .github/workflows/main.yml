@@ -7,7 +7,7 @@ on:
     branches: [ main ]
 
 env:
-  DOTNET_VERSION: '9.0.x'                # logs show net9.0 builds/tests
+  DOTNET_VERSION: '9.0.x'
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   DOTNET_NOLOGO: true
@@ -47,16 +47,14 @@ jobs:
     - name: Build solution
       run: dotnet build paperless/paperless.sln --configuration Release --no-restore
 
-    # 🔒 Run ONLY the test project to avoid picking up app projects as test containers
     - name: Run unit tests
       run: >
         dotnet test
-        paperless/tests/Paperless.UnitTests/Paperless.UnitTests.csproj
+        tests/Paperless.UnitTests/Paperless.UnitTests.csproj
         --configuration Release
         --no-build
         --verbosity normal
 
-    # ---- Docker bits (optional for CI, kept as you had them) ----
     - name: Create password files
       run: |
         mkdir -p secrets
