@@ -88,8 +88,8 @@ services:
   # .NET Services
   paperless-webui:
     build:
-      context: ./paperless
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: ./paperless/Dockerfile
     container_name: paperless-webui
     ports:
       - "80:80"

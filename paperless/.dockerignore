@@ -1,0 +1,17 @@
+# VCS / IDE
+.git
+.gitignore
+**/.vs
+**/.idea
+**/.vscode
+
+# Build outputs
+**/bin
+**/obj
+
+# Misc
+secrets/
+*.user
+*.suo
+*.swp
+docker-compose.override.yml
