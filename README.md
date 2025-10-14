@@ -5,18 +5,14 @@ Sebastian & Felix
 ## Overview
 .NET/C# document Document Management System for SWEN3 (FH Technikum Wien)
 
-## DB Setup (Docker Desktop)
-1. Pull the postgres-17.5 image
-2. Run it in a container
-3. Use psql in Docker Desktop to create a DB called 'swen3project'
-4. Add it in Visual Studio's Server Explorer
-5. Update Configuration.cs with location of your config file (_FILENAME)
-6. Perform Entity Framework Migration to set up DB
-
-## Entity Framework Migrations (in Package Manager Console)
-1. Install-Package Microsoft.EntityFrameworkCore.Tools
-2. Add-Migration MigrationName
-3. Update-Database
-
-## HTTP Request Testing
-1. code --install-extension humao.rest-client
+## DB Setup (Initial Migration)
+1. Start Docker Desktop
+2. Run where docker-compose.yml is located: docker compose up -d
+3. Navigate in Docker Desktop: Containers > swen3project > paperless-postgres > Files > run > secrets > postgres_password
+4. Save password within to a local txt file
+5. In C# Project: Change passwordPath in Configuration.cs to absolute path to local txt file
+6. In Package Manager Console: Add-Migration InitialMigration
+7. In C# Project: Change passwordPath in Configuration.cs back to relative path
+8. Run where docker-compose.yml is located: docker compose down
+9. Run where docker-compose.yml is located: docker compose up -d
+10. C# Project will now apply the migration when starting up
