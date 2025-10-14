@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   # Database
@@ -88,8 +88,8 @@ services:
   # .NET Services
   paperless-webui:
     build:
-      context: .
-      dockerfile: ./paperless/Dockerfile
+      context: ./paperless/src/paperless
+      dockerfile: Dockerfile
     container_name: paperless-webui
     ports:
       - "80:80"
