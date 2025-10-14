@@ -5,6 +5,9 @@ Sebastian & Felix
 ## Overview
 .NET/C# document Document Management System for SWEN3 (FH Technikum Wien)
 
+## Building
+Build using the docker-compose file: docker compose up -d
+
 ## DB Setup (Initial Migration)
 1. Start Docker Desktop
 2. Run where docker-compose.yml is located: docker compose up -d
