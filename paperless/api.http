@@ -1,0 +1,33 @@
+@base = http://localhost:5001
+
+### List (empty at start)
+GET {{base}}/api/documents
+
+### Create
+POST {{base}}/api/documents
+Content-Type: application/json
+
+{
+  "fileName": "Hello.pdf",
+  "contentType": "application/pdf",
+  "summary": "demo",
+  "tags": ["demo"]
+}
+
+### Get by id (replace {{id}} with the Id from Create response)
+GET {{base}}/api/documents/{{id}}
+
+### Update
+PUT {{base}}/api/documents/{{id}}
+Content-Type: application/json
+
+{
+  "id": "{{id}}",
+  "fileName": "Hello-updated.pdf",
+  "contentType": "application/pdf",
+  "summary": "updated",
+  "tags": ["demo","updated"]
+}
+
+### Delete
+DELETE {{base}}/api/documents/{{id}}
