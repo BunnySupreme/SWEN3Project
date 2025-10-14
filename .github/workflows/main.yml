@@ -7,10 +7,11 @@ on:
     branches: [ main ]
 
 env:
-  DOTNET_VERSION: '8.0.x'
+  DOTNET_VERSION: '9.0.x'
   DOTNET_CLI_TELEMETRY_OPTOUT: 1
-  ASPNETCORE_ENVIRONMENT: Production
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+  ASPNETCORE_ENVIRONMENT: Production
   
 jobs:
   build-and-test:
@@ -21,18 +22,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Create password files
-      run: |
-        mkdir -p secrets
-        echo "${{ secrets.POSTGRES_PASSWORD }}" > secrets/postgres_password.txt
-        echo "${{ secrets.RABBIT_PASSWORD }}" > secrets/rabbit_password.txt
-        echo "${{ secrets.MINIO_PASSWORD }}" > secrets/minio_password.txt
-      working-directory: .
-
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Cache NuGet
+      uses: actions/cache@v4
+      with:
+        path: ~/.nuget/packages
+        key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-nuget-
 
     - name: Verify Docker and Docker Compose
       run: |
@@ -41,44 +42,48 @@ jobs:
         docker ps
 
     - name: Restore dependencies
-      run: dotnet restore
-      working-directory: ./paperless
+      run: dotnet restore paperless/paperless.sln
 
     - name: Build solution
-      run: dotnet build --configuration Release --no-restore
-      working-directory: ./paperless
+      run: dotnet build paperless/paperless.sln --configuration Release --no-restore
 
-    - name: Run tests
-      run: dotnet test --configuration Release --no-build --verbosity normal
+    - name: Run unit tests
       working-directory: ./paperless
+      run: >
+        dotnet test
+        tests/Paperless.UnitTests/Paperless.UnitTests.csproj
+        --configuration Release
+        --no-build
+        --verbosity normal
+
+    - name: Create password files
+      run: |
+        mkdir -p secrets
+        echo "${{ secrets.POSTGRES_PASSWORD }}" > secrets/postgres_password.txt
+        echo "${{ secrets.RABBIT_PASSWORD }}" > secrets/rabbit_password.txt
+        echo "${{ secrets.MINIO_PASSWORD }}" > secrets/minio_password.txt
 
     - name: Build Docker images
       run: docker compose -f "docker-compose.yml" build
-      working-directory: .
 
     - name: Test Docker Compose configuration
       run: docker compose -f "docker-compose.yml" config
-      working-directory: .
 
     - name: Run integration tests
       run: |
-        # Start services for integration testing
         docker compose -f "docker-compose.yml" up -d
-        # Wait for services to be ready
         sleep 30
-        # Apply database migration
         # dotnet ef database update --project ./paperless/paperless.csproj
-        # Integration tests once present
         # dotnet test --filter "Category=Integration"
-        # Cleanup
         docker compose -f "docker-compose.yml" down
-      working-directory: .
 
     - name: Clean up secret files
       if: always()
+      shell: bash
       run: |
-        rm -f postgres_password.txt rabbit_password.txt minio_password.txt
-      working-directory: ./secrets
+        if [ -d secrets ]; then
+        rm -f secrets/postgres_password.txt secrets/rabbit_password.txt secrets/minio_password.txt
+        fi
 
   deploy:
     name: Deploy to Production
@@ -99,12 +104,10 @@ jobs:
 
     - name: Deploy to production
       run: docker compose -f "docker-compose.yml" up -d
-      working-directory: .
 
     - name: Clean up secret files
       if: always()
-      run: |
-        rm -f postgres_password.txt rabbit_password.txt minio_password.txt
+      run: rm -f postgres_password.txt rabbit_password.txt minio_password.txt
       working-directory: ./secrets
 
   notify:
@@ -112,7 +115,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-and-test, deploy]
     if: always()
-    
     steps:
     - name: Notify build status
       run: |
