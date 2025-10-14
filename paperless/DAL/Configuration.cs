@@ -22,7 +22,7 @@
             if (string.IsNullOrEmpty(password))
             {
                 string passwordPath = Path.Combine(AppContext.BaseDirectory, "postgres_password.txt");
-                string idePasswordPath = Path.Combine(Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.Parent!.FullName, "postgres_password.txt");
+                string idePasswordPath = Path.Combine(Directory.GetParent(AppContext.BaseDirectory)!.Parent!.Parent!.Parent!.Parent!.FullName, "secrets", "postgres_password.txt");
 
                 if (File.Exists(passwordPath))
                 {
