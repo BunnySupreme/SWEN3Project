@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using paperless.DAL;
+using paperless.DAL.Repositories;
 using Paperless.Services;
 
 // Build the app
@@ -8,6 +9,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<DataContext>(options => { options.UseNpgsql(Configuration.PostgresConnectionString); });
 builder.Services.AddSingleton<IDocumentService, DocumentService>();
+builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 var app = builder.Build();
 
 // Apply database migrations automatically
