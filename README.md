@@ -16,6 +16,6 @@ Build using the docker-compose file: docker compose up -d
 5. In C# Project: Change passwordPath in Configuration.cs to absolute path to local txt file
 6. In Package Manager Console: Add-Migration InitialMigration
 7. In C# Project: Change passwordPath in Configuration.cs back to relative path
-8. Run where docker-compose.yml is located: docker compose down
+8. Run where docker-compose.yml is located: docker compose down -v
 9. Run where docker-compose.yml is located: docker compose up -d
 10. C# Project will now apply the migration when starting up
