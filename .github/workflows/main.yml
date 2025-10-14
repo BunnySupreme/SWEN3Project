@@ -48,6 +48,7 @@ jobs:
       run: dotnet build paperless/paperless.sln --configuration Release --no-restore
 
     - name: Run unit tests
+      working-directory: ./paperless
       run: >
         dotnet test
         tests/Paperless.UnitTests/Paperless.UnitTests.csproj
@@ -78,8 +79,11 @@ jobs:
 
     - name: Clean up secret files
       if: always()
-      run: rm -f postgres_password.txt rabbit_password.txt minio_password.txt
-      working-directory: ./secrets
+      shell: bash
+      run: |
+        if [ -d secrets ]; then
+        rm -f secrets/postgres_password.txt secrets/rabbit_password.txt secrets/minio_password.txt
+        fi
 
   deploy:
     name: Deploy to Production
