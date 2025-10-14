@@ -14,7 +14,8 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     secrets:
-      - postgres_password
+      postgres_password:
+        file: ./secrets/postgres_password
     networks:
       - paperless-network
     restart: unless-stopped
