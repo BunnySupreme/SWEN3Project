@@ -27,7 +27,6 @@ jobs:
         echo "${{ secrets.POSTGRES_PASSWORD }}" > secrets/postgres_password.txt
         echo "${{ secrets.RABBIT_PASSWORD }}" > secrets/rabbit_password.txt
         echo "${{ secrets.MINIO_PASSWORD }}" > secrets/minio_password.txt
-
       working-directory: .
 
     - name: Setup .NET
@@ -75,6 +74,12 @@ jobs:
         docker compose -f "docker-compose.yml" down
       working-directory: .
 
+    - name: Clean up secret files
+      if: always()
+      run: |
+        rm -f postgres_password.txt rabbit_password.txt minio_password.txt
+      working-directory: ./secrets
+
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
@@ -85,9 +90,22 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Create password files
+      run: |
+        mkdir -p secrets
+        echo "${{ secrets.POSTGRES_PASSWORD }}" > secrets/postgres_password.txt
+        echo "${{ secrets.RABBIT_PASSWORD }}" > secrets/rabbit_password.txt
+        echo "${{ secrets.MINIO_PASSWORD }}" > secrets/minio_password.txt
+
     - name: Deploy to production
       run: docker compose -f "docker-compose.yml" up -d
       working-directory: .
+
+    - name: Clean up secret files
+      if: always()
+      run: |
+        rm -f postgres_password.txt rabbit_password.txt minio_password.txt
+      working-directory: ./secrets
 
   notify:
     name: Notify Status

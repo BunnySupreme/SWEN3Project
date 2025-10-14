@@ -6,9 +6,10 @@ services:
     image: postgres:17.5
     container_name: paperless-postgres
     environment:
-      POSTGRES_DB: paperless
-      POSTGRES_USER: paperless
-      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      - POSTGRES_DB=paperless
+      - POSTGRES_USER=paperless
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+
     ports:
       - "5432:5432"
     volumes:
@@ -24,8 +25,8 @@ services:
   #   image: rabbitmq:3-management
   #   container_name: paperless-rabbitmq
   #   environment:
-  #     RABBITMQ_DEFAULT_USER: paperless
-  #     RABBITMQ_DEFAULT_PASS: /run/secrets/rabbit_password
+  #     - RABBITMQ_DEFAULT_USER=paperless
+  #     - RABBITMQ_DEFAULT_PASS_FILE=/run/secrets/rabbit_password
   #   ports:
   #     - "5672:5672"   # AMQP protocol
   #     - "15672:15672" # Management console (corrected from 9093)
@@ -42,8 +43,8 @@ services:
   #   image: minio/minio
   #   container_name: paperless-minio
   #   environment:
-  #     MINIO_ROOT_USER: paperless
-  #     MINIO_ROOT_PASSWORD: /run/secrets/minio_password
+  #     MINIO_ROOT_USER=paperless
+  #     MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
   #   ports:
   #     - "9000:9000" # API
   #     - "9001:9001" # Console (corrected from 9090)
@@ -98,6 +99,11 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:5001 # http://+:7081 would require certificate for docker container
+      - POSTGRES_HOST=paperless-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=paperless
+      - POSTGRES_USERNAME=paperless
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
       # - RabbitMQ__Host=rabbitmq
       # - RabbitMQ__Username=paperless
       # - RabbitMQ__Password=/run/secrets/rabbit_password
@@ -182,10 +188,6 @@ secrets:
     file: ./secrets/rabbit_password.txt
   minio_password:
     file: ./secrets/minio_password.txt
-#   rabbit_password:
-#     file: ./rabbit_password.txt
-#   minio_password:
-#     file: ./minio_password.txt
 
 networks:
   paperless-network:
