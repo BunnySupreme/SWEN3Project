@@ -5,54 +5,61 @@ namespace paperless.DAL.Repositories
     public class DocumentRepository
     {
         #region Constructors
-        public DocumentRepository() { }
+        public DocumentRepository(DataContext db) 
+        { 
+            _db = db;
+        }
+        #endregion
+
+        #region DataContext
+        private readonly DataContext _db;
         #endregion
 
         #region CRUD Operations
-        public void CreateOrUpdate(DataContext db, Document document)
+        public void CreateOrUpdate(Document document)
         {
-            Document? dbDocument = db.Documents.FirstOrDefault(d => d.Id == document.Id);
+            Document? dbDocument = _db.Documents.FirstOrDefault(d => d.Id == document.Id);
             if (dbDocument == null)
             {
-                db.Documents.Add(document);
+                _db.Documents.Add(document);
             }
             else
             {
                 dbDocument.Update(document.Title, document.Content, document.Summary, document.Tags);
             }
-            db.SaveChanges();
+            _db.SaveChanges();
         }
 
-        public List<Document> ReadAll(DataContext db)
+        public List<Document> ReadAll()
         {
-            return db.Documents.ToList();
+            return _db.Documents.ToList();
         }
 
-        public Document? ReadyById(DataContext db, Guid id)
+        public Document? ReadById(Guid id)
         {
-            return db.Documents.FirstOrDefault(d => d.Id == id);
+            return _db.Documents.FirstOrDefault(d => d.Id == id);
         }
 
-        public List<Document> ReadByTitle(DataContext db, string title)
+        public List<Document> ReadByTitle(string title)
         {
-            return db.Documents
+            return _db.Documents
                 .Where(d => d.Title.Contains(title))
                 .ToList();
         }
 
-        public void DeleteAll(DataContext db)
+        public void DeleteAll()
         {
-            db.Documents.RemoveRange(db.Documents);
-            db.SaveChanges();
+            _db.Documents.RemoveRange(_db.Documents);
+            _db.SaveChanges();
         }
 
-        public void DeleteById(DataContext db, Guid id)
+        public void DeleteById(Guid id)
         {
-            Document? document = db.Documents.FirstOrDefault(d => d.Id == id);
+            Document? document = _db.Documents.FirstOrDefault(d => d.Id == id);
             if (document != null)
             {
-                db.Documents.Remove(document);
-                db.SaveChanges();
+                _db.Documents.Remove(document);
+                _db.SaveChanges();
             }
         }
         #endregion
