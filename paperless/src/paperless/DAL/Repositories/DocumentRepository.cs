@@ -2,10 +2,10 @@
 
 namespace paperless.DAL.Repositories
 {
-    public class DocumentRepository
+    public class DocumentRepository : IDocumentRepository
     {
         #region Constructors
-        public DocumentRepository(DataContext db) 
+        public DocumentRepository(DataContext db)
         { 
             _db = db;
         }
