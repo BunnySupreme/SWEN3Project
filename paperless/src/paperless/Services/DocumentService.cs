@@ -11,12 +11,12 @@ public sealed class DocumentService : IDocumentService
 
     public DocumentService(IDocumentRepository repo) => _repo = repo;
 
-    public Task<IReadOnlyList<DocumentReadDto>> ListAsync(
+    public async Task<IReadOnlyList<DocumentReadDto>> ListAsync(
         string? title, int skip, int take, CancellationToken ct = default)
     {
         var docs = string.IsNullOrWhiteSpace(title)
-            ? _repo.ReadAll()
-            : _repo.ReadByTitle(title);
+            ? await _repo.ReadAllAsync()
+            : await _repo.ReadByTitleAsync(title);
 
         var page = docs
             .OrderByDescending(d => d.CreationDate)
@@ -27,16 +27,16 @@ public sealed class DocumentService : IDocumentService
             .ToList()
             .AsReadOnly();
 
-        return Task.FromResult<IReadOnlyList<DocumentReadDto>>(page);
+        return page;
     }
 
-    public Task<DocumentReadDto?> GetAsync(Guid id, CancellationToken ct = default)
+    public async Task<DocumentReadDto?> GetAsync(Guid id, CancellationToken ct = default)
     {
-        var doc = _repo.ReadById(id);
-        return Task.FromResult(doc is null ? null : MapToReadDto(doc));
+        var doc = await _repo.ReadByIdAsync(id);
+        return doc is null ? null : MapToReadDto(doc);
     }
 
-    public Task<DocumentReadDto> CreateAsync(DocumentCreateDto dto, CancellationToken ct = default)
+    public async Task<DocumentReadDto> CreateAsync(DocumentCreateDto dto, CancellationToken ct = default)
     {
         var entity = new Document();
         entity.Update(
@@ -46,16 +46,16 @@ public sealed class DocumentService : IDocumentService
             tags: ToCsv(dto.Tags)
         );
 
-        _repo.CreateOrUpdate(entity);
+        await _repo.CreateOrUpdateAsync(entity);
 
         var read = MapToReadDto(entity, dto.ContentType ?? "application/pdf");
-        return Task.FromResult(read);
+        return read;
     }
 
-    public Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
     {
-        var entity = _repo.ReadById(dto.Id);
-        if (entity is null) return Task.FromResult(false);
+        var entity = await _repo.ReadByIdAsync(dto.Id);
+        if (entity is null) return false;
 
         entity.Update(
             title: dto.FileName,
@@ -64,17 +64,17 @@ public sealed class DocumentService : IDocumentService
             tags: ToCsv(dto.Tags)
         );
 
-        _repo.CreateOrUpdate(entity);
-        return Task.FromResult(true);
+        await _repo.CreateOrUpdateAsync(entity);
+        return true;
     }
 
-    public Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var entity = _repo.ReadById(id);
-        if (entity is null) return Task.FromResult(false);
+        var entity = await _repo.ReadByIdAsync(id);
+        if (entity is null) return false;
 
-        _repo.DeleteById(id);
-        return Task.FromResult(true);
+        await _repo.DeleteByIdAsync(id);
+        return true;
     }
 
 
