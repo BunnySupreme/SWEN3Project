@@ -4,10 +4,10 @@ using paperless.DAL.Models;
 
 public interface IDocumentRepository
 {
-    void CreateOrUpdate(Document document);
-    List<Document> ReadAll();
-    Document? ReadById(Guid id);
-    List<Document> ReadByTitle(string title);
-    void DeleteAll();
-    void DeleteById(Guid id);
+    Task CreateOrUpdateAsync(Document document);
+    Task<List<Document>> ReadAllAsync();
+    Task<Document?> ReadByIdAsync(Guid id);
+    Task<List<Document>> ReadByTitleAsync(string title);
+    Task DeleteAllAsync();
+    Task DeleteByIdAsync(Guid id);
 }
