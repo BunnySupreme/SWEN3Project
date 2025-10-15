@@ -39,7 +39,7 @@
             }
 
             // Get rest of connection details from environment variables or hard-coded defaults
-            string host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "paperless-postgres";
+            string host = Environment.GetEnvironmentVariable("POSTGRES_HOST") ?? "localhost";
             string port = Environment.GetEnvironmentVariable("POSTGRES_PORT") ?? "5432";
             string database = Environment.GetEnvironmentVariable("POSTGRES_DB") ?? "paperless";
             string username = Environment.GetEnvironmentVariable("POSTGRES_USER") ?? "paperless";

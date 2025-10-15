@@ -12,8 +12,8 @@ using paperless.DAL;
 namespace paperless.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20251013113603_InitialMigration")]
-    partial class InitialMigration
+    [Migration("20251015144305_InitialCreate2")]
+    partial class InitialCreate2
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
