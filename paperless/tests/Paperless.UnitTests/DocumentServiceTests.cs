@@ -21,7 +21,6 @@ public class DocumentServiceTests
     [Fact]
     public async Task ListAsync_ShouldReturnMappedDtos()
     {
-        // Arrange
         var docs = new List<Document>
         {
             new Document(), // older
@@ -34,10 +33,8 @@ public class DocumentServiceTests
             .Setup(r => r.ReadAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(docs);
 
-        // Act
         var result = await _service.ListAsync(null, 0, 50, CancellationToken.None);
 
-        // Assert
         Assert.Equal(2, result.Count);
         Assert.Equal("File A", result[0].FileName);
         Assert.Equal("File B", result[1].FileName);
@@ -46,7 +43,6 @@ public class DocumentServiceTests
     [Fact]
     public async Task GetAsync_ShouldReturnDto_WhenFound()
     {
-        // Arrange
         var doc = new Document();
         doc.Update("Some File", "c", "s", "t");
 
@@ -54,10 +50,8 @@ public class DocumentServiceTests
             .Setup(r => r.ReadByIdAsync(doc.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(doc);
 
-        // Act
         var result = await _service.GetAsync(doc.Id, CancellationToken.None);
 
-        // Assert
         Assert.NotNull(result);
         Assert.Equal("Some File", result!.FileName);
     }
@@ -65,7 +59,6 @@ public class DocumentServiceTests
     [Fact]
     public async Task CreateAsync_ShouldCallRepositoryAndReturnDto()
     {
-        // Arrange
         var createDto = new DocumentCreateDto(
             FileName: "NewFile",
             ContentType: "application/pdf",
@@ -76,10 +69,8 @@ public class DocumentServiceTests
             .Setup(r => r.CreateOrUpdateAsync(It.IsAny<Document>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
 
-        // Act
         var result = await _service.CreateAsync(createDto, CancellationToken.None);
 
-        // Assert
         _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<Document>(), It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal("NewFile", result.FileName);
     }
@@ -87,7 +78,6 @@ public class DocumentServiceTests
     [Fact]
     public async Task UpdateAsync_ShouldReturnTrue_WhenDocumentExists()
     {
-        // Arrange
         var existing = new Document();
         existing.Update("Old", "c", "s", "t");
 
@@ -106,10 +96,8 @@ public class DocumentServiceTests
             Summary: "new summary",
             Tags: new List<string> { "tagX" });
 
-        // Act
         var result = await _service.UpdateAsync(dto, CancellationToken.None);
 
-        // Assert
         Assert.True(result);
         _repoMock.Verify(
             r => r.CreateOrUpdateAsync(
