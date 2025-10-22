@@ -23,7 +23,6 @@ using (var scope = app.Services.CreateScope())
     }
     catch (Exception ex)
     {
-        // Add logging here
         throw new Exception("ERROR - Could not apply migrations:", ex);
     }
 }

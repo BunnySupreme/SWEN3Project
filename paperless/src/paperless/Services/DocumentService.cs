@@ -1,5 +1,6 @@
 // Paperless.Services/DocumentService.cs
 using paperless.DAL;
+using log4net;
 using paperless.DAL.Models;
 using paperless.DAL.Repositories;
 using Paperless.Api.Contracts;
@@ -8,15 +9,21 @@ namespace Paperless.Services;
 
 public sealed class DocumentService : IDocumentService
 {
+    #region Fields
     private readonly IDocumentRepository _repo;
     private readonly DataContext _db;
+    private readonly ILog _logger = LogManager.GetLogger(typeof(DocumentService));
+    #endregion
 
+    #region Constructors
     public DocumentService(IDocumentRepository repo, DataContext db)
     {
         _repo = repo;
         _db = db;
     }
+    #endregion
 
+    #region Methods
     public async Task<IReadOnlyList<DocumentReadDto>> ListAsync(
         string? title, int skip, int take, CancellationToken ct = default)
     {
@@ -86,7 +93,6 @@ public sealed class DocumentService : IDocumentService
         return true;
     }
 
-
     private static string ToCsv(IReadOnlyList<string>? tags) =>
         (tags is null || tags.Count == 0)
             ? string.Empty
@@ -103,4 +109,5 @@ public sealed class DocumentService : IDocumentService
                 ? Array.Empty<string>()
                 : d.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         );
+    #endregion
 }
