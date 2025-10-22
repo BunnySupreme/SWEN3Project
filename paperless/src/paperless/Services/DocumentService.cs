@@ -1,4 +1,5 @@
 // Paperless.Services/DocumentService.cs
+using paperless.DAL;
 using paperless.DAL.Models;
 using paperless.DAL.Repositories;
 using Paperless.Api.Contracts;
@@ -8,8 +9,13 @@ namespace Paperless.Services;
 public sealed class DocumentService : IDocumentService
 {
     private readonly IDocumentRepository _repo;
+    private readonly DataContext _db;
 
-    public DocumentService(IDocumentRepository repo) => _repo = repo;
+    public DocumentService(IDocumentRepository repo, DataContext db)
+    {
+        _repo = repo;
+        _db = db;
+    }
 
     public async Task<IReadOnlyList<DocumentReadDto>> ListAsync(
         string? title, int skip, int take, CancellationToken ct = default)
@@ -32,7 +38,7 @@ public sealed class DocumentService : IDocumentService
 
     public async Task<DocumentReadDto?> GetAsync(Guid id, CancellationToken ct = default)
     {
-        var doc = await _repo.ReadByIdAsync(id);
+        var doc = await _repo.ReadByIdAsync(id, ct);
         return doc is null ? null : MapToReadDto(doc);
     }
 
@@ -46,7 +52,8 @@ public sealed class DocumentService : IDocumentService
             tags: ToCsv(dto.Tags)
         );
 
-        await _repo.CreateOrUpdateAsync(entity);
+        await _repo.CreateOrUpdateAsync(entity, ct);
+        await _db.SaveChangesAsync();
 
         var read = MapToReadDto(entity, dto.ContentType ?? "application/pdf");
         return read;
@@ -54,7 +61,7 @@ public sealed class DocumentService : IDocumentService
 
     public async Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
     {
-        var entity = await _repo.ReadByIdAsync(dto.Id);
+        var entity = await _repo.ReadByIdAsync(dto.Id, ct);
         if (entity is null) return false;
 
         entity.Update(
@@ -64,16 +71,18 @@ public sealed class DocumentService : IDocumentService
             tags: ToCsv(dto.Tags)
         );
 
-        await _repo.CreateOrUpdateAsync(entity);
+        await _repo.CreateOrUpdateAsync(entity, ct);
+        await _db.SaveChangesAsync();
         return true;
     }
 
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
     {
-        var entity = await _repo.ReadByIdAsync(id);
+        var entity = await _repo.ReadByIdAsync(id, ct);
         if (entity is null) return false;
 
-        await _repo.DeleteByIdAsync(id);
+        await _repo.DeleteByIdAsync(id, ct);
+        await _db.SaveChangesAsync();
         return true;
     }
 

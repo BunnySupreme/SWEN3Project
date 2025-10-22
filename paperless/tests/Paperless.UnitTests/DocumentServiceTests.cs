@@ -3,7 +3,8 @@ using Paperless.Api.Contracts;
 using Paperless.Services;
 using paperless.DAL.Models;
 using paperless.DAL.Repositories;
-using Xunit;
+using paperless.DAL;
+using Microsoft.EntityFrameworkCore;
 
 namespace Paperless.UnitTests;
 
@@ -11,11 +12,22 @@ public class DocumentServiceTests
 {
     private readonly Mock<IDocumentRepository> _repoMock;
     private readonly DocumentService _service;
+    private readonly Mock<DataContext> _dbMock;
 
     public DocumentServiceTests()
     {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        _dbMock = new Mock<DataContext>(options) { CallBase = true };
+
+        _dbMock
+            .Setup(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
         _repoMock = new Mock<IDocumentRepository>();
-        _service = new DocumentService(_repoMock.Object);
+        _service = new DocumentService(_repoMock.Object, _dbMock.Object);
     }
 
     [Fact]

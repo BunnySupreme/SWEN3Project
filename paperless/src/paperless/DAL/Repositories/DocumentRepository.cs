@@ -30,8 +30,6 @@ namespace paperless.DAL.Repositories
             {
                 existing.Update(document.Title, document.Content, document.Summary, document.Tags);
             }
-
-            await _db.SaveChangesAsync(ct);
         }
 
         public Task<List<Document>> ReadAllAsync(CancellationToken ct = default) =>
