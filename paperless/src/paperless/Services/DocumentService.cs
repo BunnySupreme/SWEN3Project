@@ -12,7 +12,6 @@ public sealed class DocumentService : IDocumentService
     #region Fields
     private readonly IDocumentRepository _repo;
     private readonly DataContext _db;
-    private readonly ILog _logger = LogManager.GetLogger(typeof(DocumentService));
     #endregion
 
     #region Constructors
