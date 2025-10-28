@@ -91,6 +91,8 @@ services:
       context: ./paperless/src/paperless
       dockerfile: Dockerfile
     container_name: paperless-webui
+    volumes:
+      - ./logs:/app/logs
     ports:
       - "80:80"
       - "443:443"
