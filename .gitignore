@@ -412,7 +412,6 @@ frontend/.cache/
 frontend/node_modules/
 
 # Vite/Quasar local environment files (machine-specific)
-frontend/.env.development
 frontend/.env.local
 frontend/.env.*.local
 
