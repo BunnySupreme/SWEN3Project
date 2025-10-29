@@ -402,3 +402,25 @@ FodyWeavers.xsd
 
 # Secrets
 *_password.txt
+
+
+# --- Quasar / Vite frontend (in ./frontend) ---
+frontend/dist/
+frontend/.quasar/
+frontend/.output/
+frontend/.cache/
+frontend/node_modules/
+
+# Vite/Quasar local environment files (machine-specific)
+frontend/.env.development
+frontend/.env.local
+frontend/.env.*.local
+
+# Optional: other envs if you ever create them with secrets
+# (Keep .env.production if it only contains VITE_API_BASE=/api and no secrets)
+# frontend/.env
+# frontend/.env.staging
+
+# Editor junk inside frontend
+frontend/.vscode/
+frontend/.idea/
