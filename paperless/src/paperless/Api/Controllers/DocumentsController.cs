@@ -5,7 +5,7 @@ using Paperless.Services;
 namespace Paperless.Api.Controllers;
 
 [ApiController]
-[Route("a[controller]")]
+[Route("api/[controller]")]
 public class DocumentsController : ControllerBase
 {
     private const int DefaultTake = 50;

@@ -8,19 +8,19 @@ export interface DocumentDto {
 }
 
 export async function listDocuments() {
-  const { data } = await api.get<DocumentDto[]>('/api/documents');
+  const { data } = await api.get<DocumentDto[]>('/documents');
   return data;
 }
 
 export async function getDocument(id: string) {
-  const { data } = await api.get<DocumentDto>(`/api/documents/${id}`);
+  const { data } = await api.get<DocumentDto>(`/documents/${id}`);
   return data;
 }
 
 export async function uploadDocument(file: File) {
   const form = new FormData();
   form.append('file', file);
-  const { data } = await api.post('/api/documents', form, {
+  const { data } = await api.post('/documents', form, {
     headers: { 'Content-Type': 'multipart/form-data' }
   });
   return data;
