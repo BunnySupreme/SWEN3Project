@@ -1,36 +1,63 @@
 <template>
   <q-page class="q-pa-md">
-    <div class="text-h5">Paperless Dashboard</div>
-    <q-btn class="q-mt-md" label="Test API" @click="testApi" />
-    <div class="q-mt-md">Base: {{ base }}</div>
-    <pre class="q-mt-md">{{ result }}</pre>
+    <div class="row items-center justify-between q-mb-md">
+      <div class="text-h5">Documents</div>
+      <q-btn color="primary" label="Upload" :to="{ name: 'upload' }" />
+    </div>
+    <q-table
+      :rows="rows"
+      :columns="columns"
+      row-key="id"
+      :loading="loading"
+      flat bordered
+      @row-click="goDetail"
+    />
   </q-page>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { api } from 'boot/axios';
+import { onMounted, ref } from 'vue';
+import { listDocuments } from 'src/api/client';
+import { useRouter } from 'vue-router';
+import type { QTableColumn } from 'quasar';
+import type { DocumentDto } from 'src/api/client';
 
-const base = import.meta.env.VITE_API_BASE;
-const result = ref('Click "Test API"');
+const router = useRouter();
+const rows = ref<DocumentDto[]>([]);
+const loading = ref(false);
 
-import axios from 'axios';
+const columns: QTableColumn<DocumentDto>[] = [
+  {
+    name: 'title',
+    label: 'Title',
+    field: 'title',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'createdAt',
+    label: 'Created',
+    field: 'createdAt',
+    align: 'left',
+    sortable: true,
+  },
+  {
+    name: 'sizeBytes',
+    label: 'Size (B)',
+    field: 'sizeBytes',
+    align: 'right',
+    sortable: true,
+  },
+];
 
-async function testApi() {
-  try {
-    const { data } = await api.get('/documents');
-    result.value = JSON.stringify(data, null, 2);
-  } catch (e: unknown) {
-    if (axios.isAxiosError(e)) {
-      // Axios error: show server message or generic message
-      const body = e.response?.data ?? e.message;
-      result.value = typeof body === 'string' ? body : JSON.stringify(body, null, 2);
-    } else if (e instanceof Error) {
-      result.value = e.message;
-    } else {
-      result.value = String(e);
-    }
-  }
+
+function goDetail(_evt: unknown, row: DocumentDto) {
+  void router.push({ name: 'docDetail', params: { id: row.id } });
 }
 
+onMounted(async () => {
+  loading.value = true;
+  try { rows.value = await listDocuments(); }
+  finally { loading.value = false; }
+});
 </script>

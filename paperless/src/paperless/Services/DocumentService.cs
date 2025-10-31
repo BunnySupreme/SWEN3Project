@@ -1,6 +1,4 @@
-// Paperless.Services/DocumentService.cs
-using paperless.DAL;
-using log4net;
+﻿using paperless.DAL;
 using paperless.DAL.Models;
 using paperless.DAL.Repositories;
 using Paperless.Api.Contracts;
@@ -9,20 +7,18 @@ namespace Paperless.Services;
 
 public sealed class DocumentService : IDocumentService
 {
-    #region Fields
     private readonly IDocumentRepository _repo;
     private readonly DataContext _db;
-    #endregion
 
-    #region Constructors
     public DocumentService(IDocumentRepository repo, DataContext db)
     {
         _repo = repo;
         _db = db;
     }
-    #endregion
 
-    #region Methods
+    // ─────────────────────────────────────────────
+    // LIST
+    // ─────────────────────────────────────────────
     public async Task<IReadOnlyList<DocumentReadDto>> ListAsync(
         string? title, int skip, int take, CancellationToken ct = default)
     {
@@ -30,7 +26,7 @@ public sealed class DocumentService : IDocumentService
             ? await _repo.ReadAllAsync()
             : await _repo.ReadByTitleAsync(title);
 
-        var page = docs
+        return docs
             .OrderByDescending(d => d.CreationDate)
             .ThenByDescending(d => d.Title)
             .Skip(skip)
@@ -38,16 +34,20 @@ public sealed class DocumentService : IDocumentService
             .Select(d => MapToReadDto(d))
             .ToList()
             .AsReadOnly();
-
-        return page;
     }
 
+    // ─────────────────────────────────────────────
+    // GET
+    // ─────────────────────────────────────────────
     public async Task<DocumentReadDto?> GetAsync(Guid id, CancellationToken ct = default)
     {
         var doc = await _repo.ReadByIdAsync(id, ct);
         return doc is null ? null : MapToReadDto(doc);
     }
 
+    // ─────────────────────────────────────────────
+    // CREATE (JSON)
+    // ─────────────────────────────────────────────
     public async Task<DocumentReadDto> CreateAsync(DocumentCreateDto dto, CancellationToken ct = default)
     {
         var entity = new Document();
@@ -55,16 +55,36 @@ public sealed class DocumentService : IDocumentService
             title: dto.FileName,
             content: string.Empty,
             summary: dto.Summary ?? string.Empty,
-            tags: ToCsv(dto.Tags)
-        );
+            tags: ToCsv(dto.Tags));
 
         await _repo.CreateOrUpdateAsync(entity, ct);
         await _db.SaveChangesAsync();
 
-        var read = MapToReadDto(entity, dto.ContentType ?? "application/pdf");
-        return read;
+        return MapToReadDto(entity, dto.ContentType ?? "application/pdf");
     }
 
+    // ─────────────────────────────────────────────
+    // UPLOAD (MULTIPART)
+    // ─────────────────────────────────────────────
+    public async Task<Guid> UploadAsync(IFormFile file, CancellationToken ct)
+    {
+        // Reuse Create logic so behavior stays consistent
+        var dto = new DocumentCreateDto
+        (
+            FileName: Path.GetFileName(file.FileName),
+            ContentType: file.ContentType,
+            Summary: string.Empty,
+            Tags: Array.Empty<string>()
+        );
+
+        var created = await CreateAsync(dto, ct);
+        // (Future: save file bytes / upload to MinIO here)
+        return created.Id;
+    }
+
+    // ─────────────────────────────────────────────
+    // UPDATE
+    // ─────────────────────────────────────────────
     public async Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
     {
         var entity = await _repo.ReadByIdAsync(dto.Id, ct);
@@ -74,14 +94,16 @@ public sealed class DocumentService : IDocumentService
             title: dto.FileName,
             content: entity.Content,
             summary: dto.Summary ?? string.Empty,
-            tags: ToCsv(dto.Tags)
-        );
+            tags: ToCsv(dto.Tags));
 
         await _repo.CreateOrUpdateAsync(entity, ct);
         await _db.SaveChangesAsync();
         return true;
     }
 
+    // ─────────────────────────────────────────────
+    // DELETE
+    // ─────────────────────────────────────────────
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var entity = await _repo.ReadByIdAsync(id, ct);
@@ -92,8 +114,11 @@ public sealed class DocumentService : IDocumentService
         return true;
     }
 
+    // ─────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────
     private static string ToCsv(IReadOnlyList<string>? tags) =>
-        (tags is null || tags.Count == 0)
+        tags is null || tags.Count == 0
             ? string.Empty
             : string.Join(',', tags);
 
@@ -108,5 +133,4 @@ public sealed class DocumentService : IDocumentService
                 ? Array.Empty<string>()
                 : d.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         );
-    #endregion
 }
