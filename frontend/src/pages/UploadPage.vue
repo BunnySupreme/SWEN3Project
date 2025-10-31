@@ -30,7 +30,7 @@ const msg = ref('');
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 function factory(_files: readonly File[]): QUploaderFactoryObject {
   return {
-    url: '/api/documents',   // Nginx/dev-proxy will forward to your backend
+    url: '/api/documents/upload',   // Nginx/dev-proxy will forward to your backend
     method: 'POST',
     fieldName: 'file',       // <-- must match your .NET action param (IFormFile file)
     withCredentials: false,
