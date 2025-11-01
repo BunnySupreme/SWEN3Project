@@ -70,9 +70,7 @@ public class DocumentsController : ControllerBase
         if (file is null || file.Length == 0)
             return BadRequest(new { message = "No file uploaded" });
 
-        // Inside the service, create & persist an entity with Title = file.FileName,
-        // CreatedAt = DateTime.UtcNow, SizeBytes = file.Length
-        var created = await _svc.UploadAsync(file, ct); // returns DocumentReadDto
+        var created = await _svc.UploadAsync(file, ct);
 
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }

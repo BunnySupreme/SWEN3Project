@@ -48,8 +48,8 @@ public class DocumentServiceTests
         var result = await _service.ListAsync(null, 0, 50, CancellationToken.None);
 
         Assert.Equal(2, result.Count);
-        Assert.Equal("File A", result[0].FileName);
-        Assert.Equal("File B", result[1].FileName);
+        Assert.Equal("File A", result[0].Title);
+        Assert.Equal("File B", result[1].Title);
     }
 
     [Fact]
@@ -65,7 +65,7 @@ public class DocumentServiceTests
         var result = await _service.GetAsync(doc.Id, CancellationToken.None);
 
         Assert.NotNull(result);
-        Assert.Equal("Some File", result!.FileName);
+        Assert.Equal("Some File", result!.Title);
     }
 
     [Fact]
@@ -84,7 +84,7 @@ public class DocumentServiceTests
         var result = await _service.CreateAsync(createDto, CancellationToken.None);
 
         _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<Document>(), It.IsAny<CancellationToken>()), Times.Once);
-        Assert.Equal("NewFile", result.FileName);
+        Assert.Equal("NewFile", result.Title);
     }
 
     [Fact]
