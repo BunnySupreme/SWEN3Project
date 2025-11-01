@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using paperless.DAL;
 using paperless.DAL.Repositories;
 using Paperless.Services;
+using System.Text.Json;
 
 // Configure log4net & create logger
 XmlConfigurator.Configure(new FileInfo("log4net.config"));
@@ -13,7 +14,8 @@ var programLogger = LogManager.GetLogger(typeof(Program));
 // Build the app
 programLogger.Info("=== Paperless Application Building ===");
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<DataContext>(options => { options.UseNpgsql(Configuration.PostgresConnectionString); });
 builder.Services.AddScoped<IDocumentService, DocumentService>();

@@ -66,7 +66,7 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     // UPLOAD (MULTIPART)
     // ─────────────────────────────────────────────
-    public async Task<Guid> UploadAsync(IFormFile file, CancellationToken ct)
+    public async Task<DocumentReadDto> UploadAsync(IFormFile file, CancellationToken ct)
     {
         // Reuse Create logic so behavior stays consistent
         var dto = new DocumentCreateDto
@@ -79,7 +79,7 @@ public sealed class DocumentService : IDocumentService
 
         var created = await CreateAsync(dto, ct);
         // (Future: save file bytes / upload to MinIO here)
-        return created.Id;
+        return created;
     }
 
     // ─────────────────────────────────────────────
@@ -125,12 +125,7 @@ public sealed class DocumentService : IDocumentService
     private static DocumentReadDto MapToReadDto(Document d, string? contentType = null) =>
         new(
             Id: d.Id,
-            FileName: d.Title,
-            ContentType: contentType ?? "application/pdf",
-            UploadedAt: d.CreationDate,
-            Summary: d.Summary,
-            Tags: string.IsNullOrWhiteSpace(d.Tags)
-                ? Array.Empty<string>()
-                : d.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            Title: d.Title,
+            CreatedAt: d.CreationDate
         );
 }

@@ -19,30 +19,32 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import type { QUploaderFactoryObject } from 'quasar';
+import { useRouter } from 'vue-router';
+import { useQuasar } from 'quasar';
 
-const msg = ref('');
+const router = useRouter();
+const $q = useQuasar();
 
-/**
- * Quasar will call this for each selected file.
- * We return instructions (url, method, field name...) so Quasar does the XHR upload.
- * Note: use a relative URL so it works in dev (proxy) and prod (Nginx).
- */
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function factory(_files: readonly File[]): QUploaderFactoryObject {
+// define msg so the template can use it
+const msg = ref<string | null>(null);
+
+function factory(): QUploaderFactoryObject {
   return {
-    url: '/api/documents/upload',   // Nginx/dev-proxy will forward to your backend
+    url: '/api/documents/upload',
     method: 'POST',
-    fieldName: 'file',       // <-- must match your .NET action param (IFormFile file)
-    withCredentials: false,
-    // headers: [{ name: 'Authorization', value: 'Bearer ...' }], // if needed later
-    // formFields: [{ name: 'someMeta', value: '123' }],          // extra fields if needed
-  };
+    fieldName: 'file',
+    withCredentials: false
+  }
 }
 
-function onDone() {
-  msg.value = 'Upload successful';
+async function onDone () {
+  msg.value = 'Upload successful'
+  $q.notify({ type: 'positive', message: 'Upload successful' })
+  await router.push({ name: 'home' })
 }
-function onFail() {
-  msg.value = 'Upload failed';
+
+function onFail () {
+  msg.value = 'Upload failed'
+  $q.notify({ type: 'negative', message: 'Upload failed' })
 }
 </script>

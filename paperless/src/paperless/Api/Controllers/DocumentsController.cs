@@ -64,20 +64,17 @@ public class DocumentsController : ControllerBase
     // ─────────────────────────────────────────────
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult> Upload(
-        [FromForm] IFormFile file,
-        CancellationToken ct = default)
+    [ProducesResponseType(typeof(DocumentReadDto), StatusCodes.Status201Created)]
+    public async Task<ActionResult<DocumentReadDto>> Upload([FromForm] IFormFile file, CancellationToken ct = default)
     {
-        if (file == null || file.Length == 0)
+        if (file is null || file.Length == 0)
             return BadRequest(new { message = "No file uploaded" });
 
-        var id = await _svc.UploadAsync(file, ct);
-        return CreatedAtAction(nameof(Get), new { id }, new
-        {
-            id,
-            fileName = file.FileName,
-            sizeBytes = file.Length
-        });
+        // Inside the service, create & persist an entity with Title = file.FileName,
+        // CreatedAt = DateTime.UtcNow, SizeBytes = file.Length
+        var created = await _svc.UploadAsync(file, ct); // returns DocumentReadDto
+
+        return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
     // ─────────────────────────────────────────────

@@ -27,29 +27,12 @@ const rows = ref<DocumentDto[]>([]);
 const loading = ref(false);
 
 const columns: QTableColumn<DocumentDto>[] = [
-  {
-    name: 'title',
-    label: 'Title',
-    field: 'title',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'createdAt',
-    label: 'Created',
-    field: 'createdAt',
-    align: 'left',
-    sortable: true,
-  },
-  {
-    name: 'sizeBytes',
-    label: 'Size (B)',
-    field: 'sizeBytes',
-    align: 'right',
-    sortable: true,
-  },
+  { name: 'title', label: 'Title', field: 'title', align: 'left', sortable: true },
+  { name: 'createdAt', label: 'Created', field: 'createdAt', align: 'left',
+    format: v => new Date(v).toLocaleString(), sortable: true },
+  { name: 'sizeBytes', label: 'Size (B)', field: 'sizeBytes', align: 'right',
+    format: v => v?.toLocaleString() ?? '', sortable: true },
 ];
-
 
 function goDetail(_evt: unknown, row: DocumentDto) {
   void router.push({ name: 'docDetail', params: { id: row.id } });
