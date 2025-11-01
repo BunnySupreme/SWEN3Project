@@ -1,13 +1,13 @@
-﻿namespace paperless.DAL.Repositories;
+﻿namespace Paperless.DAL.Repositories;
 
-using paperless.DAL.Models;
+using Paperless.DAL.Models;
 
 public interface IDocumentRepository
 {
-    void CreateOrUpdate(Document document);
-    List<Document> ReadAll();
-    Document? ReadById(Guid id);
-    List<Document> ReadByTitle(string title);
+    void CreateOrUpdate(DocumentModel document);
+    List<DocumentModel> ReadAll();
+    DocumentModel? ReadById(Guid id);
+    List<DocumentModel> ReadByTitle(string title);
     void DeleteAll();
     void DeleteById(Guid id);
 }

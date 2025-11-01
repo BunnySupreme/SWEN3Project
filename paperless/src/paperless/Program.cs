@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using paperless.DAL;
-using paperless.DAL.Repositories;
+using Paperless.DAL;
+using Paperless.DAL.Repositories;
 using Paperless.Services;
 
 // Build the app

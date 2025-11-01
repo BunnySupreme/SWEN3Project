@@ -1,6 +1,6 @@
-﻿using paperless.DAL.Models;
+﻿using Paperless.DAL.Models;
 
-namespace paperless.DAL.Repositories
+namespace Paperless.DAL.Repositories
 {
     public class DocumentRepository : IDocumentRepository
     {
@@ -16,9 +16,9 @@ namespace paperless.DAL.Repositories
         #endregion
 
         #region CRUD Operations
-        public void CreateOrUpdate(Document document)
+        public void CreateOrUpdate(DocumentModel document)
         {
-            Document? dbDocument = _db.Documents.FirstOrDefault(d => d.Id == document.Id);
+            DocumentModel? dbDocument = _db.Documents.FirstOrDefault(d => d.Id == document.Id);
             if (dbDocument == null)
             {
                 _db.Documents.Add(document);
@@ -30,17 +30,17 @@ namespace paperless.DAL.Repositories
             _db.SaveChanges();
         }
 
-        public List<Document> ReadAll()
+        public List<DocumentModel> ReadAll()
         {
             return _db.Documents.ToList();
         }
 
-        public Document? ReadById(Guid id)
+        public DocumentModel? ReadById(Guid id)
         {
             return _db.Documents.FirstOrDefault(d => d.Id == id);
         }
 
-        public List<Document> ReadByTitle(string title)
+        public List<DocumentModel> ReadByTitle(string title)
         {
             return _db.Documents
                 .Where(d => d.Title.Contains(title))
@@ -55,7 +55,7 @@ namespace paperless.DAL.Repositories
 
         public void DeleteById(Guid id)
         {
-            Document? document = _db.Documents.FirstOrDefault(d => d.Id == id);
+            DocumentModel? document = _db.Documents.FirstOrDefault(d => d.Id == id);
             if (document != null)
             {
                 _db.Documents.Remove(document);

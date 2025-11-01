@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Paperless.Api.Contracts;
 using Paperless.Services;
 
 namespace Paperless.Api.Controllers;

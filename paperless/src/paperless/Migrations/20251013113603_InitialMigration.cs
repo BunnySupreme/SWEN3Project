@@ -2,7 +2,7 @@
 
 #nullable disable
 
-namespace paperless.Migrations
+namespace Paperless.Migrations
 {
     /// <inheritdoc />
     public partial class InitialMigration : Migration

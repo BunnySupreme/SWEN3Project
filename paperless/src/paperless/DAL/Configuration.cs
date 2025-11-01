@@ -1,4 +1,4 @@
-﻿namespace paperless.DAL
+﻿namespace Paperless.DAL
 {
     public class Configuration
     {

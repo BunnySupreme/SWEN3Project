@@ -1,5 +1,5 @@
 namespace Paperless.Services;
-using Paperless.Api.Contracts;
+using Paperless.Api;
 
 public interface IDocumentService
 {

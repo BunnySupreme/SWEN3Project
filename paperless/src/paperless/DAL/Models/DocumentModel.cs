@@ -2,20 +2,20 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace paperless.DAL.Models
+namespace Paperless.DAL.Models
 {
     [Table("documents")][PrimaryKey("Id")]
-    public class Document
+    public class DocumentModel
     {
         #region Constructors
-        public Document()
+        public DocumentModel()
         {
             Id = Guid.NewGuid();
             Title = string.Empty;
             Content = string.Empty;
             Summary = string.Empty;
             Tags = string.Empty;
-            CreationDate = DateTimeOffset.UtcNow;
+            UploadedAt = DateTimeOffset.UtcNow;
         }
         #endregion
 
@@ -23,15 +23,15 @@ namespace paperless.DAL.Models
         [Key][Column("id")]
         public Guid Id { get; set; }
         [Required][Column("title")]
-        public string Title { get; private set; } = default!;
+        public string Title { get; internal set; } = default!; // Internal setters for AutoMapper
         [Required][MaxLength(255)][Column("content")]
-        public string Content { get; private set; } = default!;
+        public string Content { get; internal set; } = default!;
         [Required][Column("summary")]
-        public string Summary { get; private set; } = default!;
+        public string Summary { get; internal set; } = default!;
         [Column("tags")]
-        public string Tags { get; private set; }
-        [Required][Column("creationdate")]
-        public DateTimeOffset CreationDate { get; private set; } = default!;
+        public string Tags { get; internal set; }
+        [Required][Column("creationdate")] // Rename this column eventually
+        public DateTimeOffset UploadedAt { get; internal set; } = default!;
         #endregion
 
         #region Methods

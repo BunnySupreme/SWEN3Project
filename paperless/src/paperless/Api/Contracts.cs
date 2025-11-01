@@ -1,22 +1,21 @@
-namespace Paperless.Api.Contracts;
+namespace Paperless.Api;
 
 public sealed record DocumentReadDto(
 	Guid Id,
-	string FileName,
-	string ContentType,
-	DateTimeOffset UploadedAt,
+	string Title,
+	string Content,
 	string? Summary,
-	IReadOnlyList<string> Tags);
+	IReadOnlyList<string> Tags,
+	DateTimeOffset UploadedAt);
 
 public sealed record DocumentCreateDto(
-	string FileName,
-	string? ContentType,
+	string Title,
+	string? Content,
 	string? Summary,
 	IReadOnlyList<string> Tags);
 
 public sealed record DocumentUpdateDto(
-	Guid Id,
-	string FileName,
-	string? ContentType,
+	string Title,
+	string? Content,
 	string? Summary,
 	IReadOnlyList<string> Tags);
