@@ -15,6 +15,7 @@ public sealed record DocumentCreateDto(
 	IReadOnlyList<string> Tags);
 
 public sealed record DocumentUpdateDto(
+	Guid Id,
 	string Title,
 	string? Content,
 	string? Summary,

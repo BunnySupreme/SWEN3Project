@@ -57,7 +57,7 @@ public class DocumentsController : ControllerBase
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status400BadRequest)]
 	[ProducesResponseType(StatusCodes.Status404NotFound)]
-	public async Task<IActionResult> Update(
+	public async Task<ActionResult> Update(
 		Guid id,
 		[FromBody] DocumentUpdateDto dto,
 		CancellationToken ct = default)
@@ -72,7 +72,7 @@ public class DocumentsController : ControllerBase
 	[HttpDelete("{id:guid}")]
 	[ProducesResponseType(StatusCodes.Status204NoContent)]
 	[ProducesResponseType(StatusCodes.Status404NotFound)]
-	public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
+	public async Task<ActionResult> Delete(Guid id, CancellationToken ct = default)
 	{
 		var ok = await _svc.DeleteAsync(id, ct);
 		return ok ? NoContent() : NotFound();

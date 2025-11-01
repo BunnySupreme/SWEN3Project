@@ -17,6 +17,7 @@ public class DocumentServiceTests
     public DocumentServiceTests()
     {
         _repoMock = new Mock<IDocumentRepository>();
+        _mapperMock = new Mock<IMapper>();
         _service = new DocumentService(_repoMock.Object, _mapperMock.Object);
     }
 

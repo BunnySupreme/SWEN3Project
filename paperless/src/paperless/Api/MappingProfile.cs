@@ -23,7 +23,7 @@ namespace paperless.Api
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
                 .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => JoinTags(src.Tags)));
 
-            CreateMap<DocumentUpdateDto, DocumentModel>()
+            CreateMap<DocumentUpdateDto, DocumentModel>() // No Id mapping, as we do not wish to update the Id
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
                 .ForMember(dest => dest.Content, opt => opt.MapFrom(src => src.Content))
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
