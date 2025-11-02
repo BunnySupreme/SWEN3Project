@@ -12,7 +12,7 @@ using Paperless.DAL;
 namespace paperless.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20251102153128_Branch-14-Migration")]
+    [Migration("20251102183719_Branch-14-Migration")]
     partial class Branch14Migration
     {
         /// <inheritdoc />
@@ -31,11 +31,6 @@ namespace paperless.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("content");
 
                     b.Property<string>("Summary")
                         .IsRequired()

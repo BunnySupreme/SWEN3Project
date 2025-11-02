@@ -29,11 +29,6 @@ namespace paperless.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasColumnType("text")
-                        .HasColumnName("content");
-
                     b.Property<string>("Summary")
                         .IsRequired()
                         .HasColumnType("text")

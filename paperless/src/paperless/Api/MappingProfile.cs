@@ -12,20 +12,17 @@ namespace paperless.Api
             CreateMap<DocumentModel, DocumentReadDto>()
                 .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
-                .ForMember(dest => dest.Content, opt => opt.MapFrom(src => src.Content))
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
                 .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => SplitTags(src.Tags)))
                 .ForMember(dest => dest.UploadedAt, opt => opt.MapFrom(src => src.UploadedAt));
 
             CreateMap<DocumentCreateDto, DocumentModel>()
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
-                .ForMember(dest => dest.Content, opt => opt.MapFrom(src => src.Content))
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
                 .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => JoinTags(src.Tags)));
 
             CreateMap<DocumentUpdateDto, DocumentModel>() // No Id mapping, as we do not wish to update the Id
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
-                .ForMember(dest => dest.Content, opt => opt.MapFrom(src => src.Content))
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
                 .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => JoinTags(src.Tags)));
         }

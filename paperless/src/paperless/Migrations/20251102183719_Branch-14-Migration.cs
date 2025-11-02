@@ -17,7 +17,6 @@ namespace paperless.Migrations
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
                     title = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    content = table.Column<string>(type: "text", nullable: false),
                     summary = table.Column<string>(type: "text", nullable: false),
                     tags = table.Column<string>(type: "text", nullable: false),
                     uploadedat = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)

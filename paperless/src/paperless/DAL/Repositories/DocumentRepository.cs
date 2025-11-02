@@ -28,7 +28,7 @@ namespace Paperless.DAL.Repositories
             }
             else
             {
-                existing.Update(document.Title, document.Content, document.Summary, document.Tags);
+                existing.Update(document.Title, document.Summary, document.Tags);
             }
         }
 
