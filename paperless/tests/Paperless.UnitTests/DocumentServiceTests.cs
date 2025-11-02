@@ -30,6 +30,25 @@ public class DocumentServiceTests
         _repoMock = new Mock<IDocumentRepository>();
 
         _mapperMock = new Mock<IMapper>();
+        _mapperMock
+            .Setup(m => m.Map<DocumentReadDto>(It.IsAny<DocumentModel>()))
+            .Returns((DocumentModel d) => new DocumentReadDto(
+                Id: d.Id,
+                Title: d.Title,
+                Summary: d.Summary,
+                Tags: string.IsNullOrWhiteSpace(d.Tags)
+                    ? Array.Empty<string>()
+                    : d.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
+                UploadedAt: d.UploadedAt
+            ));
+        _mapperMock
+            .Setup(m => m.Map<DocumentModel>(It.IsAny<DocumentCreateDto>()))
+            .Returns((DocumentCreateDto dto) =>
+            {
+                var model = new DocumentModel();
+                model.Update(dto.Title, dto.Summary, dto.Tags is null ? string.Empty : string.Join(',', dto.Tags));
+                return model;
+            });
 
         _service = new DocumentService(_repoMock.Object, _dbMock.Object, _mapperMock.Object);
     }
@@ -37,6 +56,7 @@ public class DocumentServiceTests
     [Fact]
     public async Task ListAsync_ShouldReturnMappedDtos()
     {
+        // Arrange
         var docs = new List<DocumentModel>
         {
             new DocumentModel(), // older
@@ -49,8 +69,10 @@ public class DocumentServiceTests
             .Setup(r => r.ReadAllAsync(It.IsAny<CancellationToken>()))
             .ReturnsAsync(docs);
 
+        // Act
         var result = await _service.ListAsync(null, 0, 50, CancellationToken.None);
 
+        // Assert
         Assert.Equal(2, result.Count);
         Assert.Equal("File A", result[0].Title);
         Assert.Equal("File B", result[1].Title);
@@ -59,6 +81,7 @@ public class DocumentServiceTests
     [Fact]
     public async Task GetAsync_ShouldReturnDto_WhenFound()
     {
+        // Arrange
         var doc = new DocumentModel();
         doc.Update("Some File", "s", "t");
 
@@ -66,8 +89,10 @@ public class DocumentServiceTests
             .Setup(r => r.ReadByIdAsync(doc.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(doc);
 
+        // Act
         var result = await _service.GetAsync(doc.Id, CancellationToken.None);
 
+        // Assert
         Assert.NotNull(result);
         Assert.Equal("Some File", result!.Title);
     }
@@ -75,6 +100,7 @@ public class DocumentServiceTests
     [Fact]
     public async Task CreateAsync_ShouldCallRepositoryAndReturnDto()
     {
+        // Arrange
         var createDto = new DocumentCreateDto(
             Title: "NewFile",
             Summary: "sum",
@@ -82,10 +108,17 @@ public class DocumentServiceTests
 
         _repoMock
             .Setup(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()))
-            .Returns(Task.CompletedTask);
+            .Returns<DocumentModel, CancellationToken>((doc, ct) =>
+            {
+                // simulate repository/db setting persistence fields
+                doc.UploadedAt = DateTimeOffset.UtcNow;
+                return Task.CompletedTask;
+            });
 
+        // Act
         var result = await _service.CreateAsync(createDto, CancellationToken.None);
 
+        // Assert
         _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()), Times.Once);
         Assert.Equal("NewFile", result.Title);
     }
@@ -93,6 +126,7 @@ public class DocumentServiceTests
     [Fact]
     public async Task UpdateAsync_ShouldReturnTrue_WhenDocumentExists()
     {
+        // Arrange
         var existing = new DocumentModel();
         existing.Update("Old", "s", "t");
 
@@ -110,8 +144,10 @@ public class DocumentServiceTests
             Summary: "new summary",
             Tags: new List<string> { "tagX" });
 
+        // Act
         var result = await _service.UpdateAsync(dto, CancellationToken.None);
 
+        // Assert
         Assert.True(result);
         _repoMock.Verify(
             r => r.CreateOrUpdateAsync(
@@ -123,6 +159,7 @@ public class DocumentServiceTests
     [Fact]
     public async Task DeleteAsync_ShouldCallDeleteById()
     {
+        // Arrange
         var id = Guid.NewGuid();
         var doc = new DocumentModel { Id = id };
 
@@ -134,8 +171,10 @@ public class DocumentServiceTests
             .Setup(r => r.DeleteByIdAsync(id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
+        // Act
         var result = await _service.DeleteAsync(id, CancellationToken.None);
 
+        // Assert
         Assert.True(result);
         _repoMock.Verify(r => r.DeleteByIdAsync(id, It.IsAny<CancellationToken>()), Times.Once);
     }
