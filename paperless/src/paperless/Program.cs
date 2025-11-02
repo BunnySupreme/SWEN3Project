@@ -1,14 +1,22 @@
 using Microsoft.EntityFrameworkCore;
+using paperless.Api;
 using Paperless.DAL;
 using Paperless.DAL.Repositories;
 using Paperless.Services;
 
 // Build the app
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<MappingProfile>();
+}, typeof(Program).Assembly);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
-builder.Services.AddDbContext<DataContext>(options => { options.UseNpgsql(Configuration.PostgresConnectionString); });
-builder.Services.AddSingleton<IDocumentService, DocumentService>();
+builder.Services.AddDbContext<DataContext>(options => 
+{ 
+    options.UseNpgsql(Configuration.PostgresConnectionString); 
+});
+builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 var app = builder.Build();
 

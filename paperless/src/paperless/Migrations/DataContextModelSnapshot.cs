@@ -8,7 +8,7 @@ using Paperless.DAL;
 
 #nullable disable
 
-namespace Paperless.Migrations
+namespace paperless.Migrations
 {
     [DbContext(typeof(DataContext))]
     partial class DataContextModelSnapshot : ModelSnapshot
@@ -22,7 +22,7 @@ namespace Paperless.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("paperless.DAL.Models.Document", b =>
+            modelBuilder.Entity("Paperless.DAL.Models.DocumentModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
@@ -31,13 +31,8 @@ namespace Paperless.Migrations
 
                     b.Property<string>("Content")
                         .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
+                        .HasColumnType("text")
                         .HasColumnName("content");
-
-                    b.Property<DateTimeOffset>("CreationDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("creationdate");
 
                     b.Property<string>("Summary")
                         .IsRequired()
@@ -51,8 +46,13 @@ namespace Paperless.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("uploadedat");
 
                     b.HasKey("Id");
 

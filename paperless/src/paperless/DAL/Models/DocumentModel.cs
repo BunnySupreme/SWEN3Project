@@ -22,15 +22,15 @@ namespace Paperless.DAL.Models
         #region Properties
         [Key][Column("id")]
         public Guid Id { get; set; }
-        [Required][Column("title")]
+        [Required][MaxLength(255)][Column("title")]
         public string Title { get; internal set; } = default!; // Internal setters for AutoMapper
-        [Required][MaxLength(255)][Column("content")]
-        public string Content { get; internal set; } = default!;
+        [Required][Column("content")]
+        public string Content { get; internal set; } = default!; // default! to suppress nullable warning (default value setting occurs in constructor)
         [Required][Column("summary")]
         public string Summary { get; internal set; } = default!;
         [Column("tags")]
         public string Tags { get; internal set; }
-        [Required][Column("creationdate")] // Rename this column eventually
+        [Required][Column("uploadedat")] // Rename this column eventually
         public DateTimeOffset UploadedAt { get; internal set; } = default!;
         #endregion
 

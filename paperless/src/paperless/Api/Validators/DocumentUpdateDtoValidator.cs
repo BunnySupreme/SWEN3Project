@@ -15,13 +15,18 @@ namespace paperless.Api.Validators
         {
             _repo = repo;
 
-            // Don't forget rule for ID here
+            RuleFor(x => x.Id)
+                .NotEmpty().WithMessage("Id is required");
 
             RuleFor(x => x.Title)
                 .NotEmpty().WithMessage("Title is required")
                 .MaximumLength(255).WithMessage("Title must not exceed 255 characters");
 
-            // WIP: Add additional rules
+            RuleFor(x => x.Content)
+                .NotEmpty().WithMessage("Content is required");
+
+            RuleFor(x => x.Summary)
+                .NotEmpty().WithMessage("Summary is required");
         }
         #endregion
     }
