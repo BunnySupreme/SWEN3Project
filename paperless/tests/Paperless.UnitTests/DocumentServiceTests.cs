@@ -73,7 +73,7 @@ public class DocumentServiceTests
     {
         var createDto = new DocumentCreateDto(
             Title: "NewFile",
-            ContentType: "application/pdf",
+            Content: "content",
             Summary: "sum",
             Tags: new List<string> { "tag1" });
 
@@ -103,8 +103,8 @@ public class DocumentServiceTests
 
         var dto = new DocumentUpdateDto(
             Id: existing.Id,
-            FileName: "Updated",
-            ContentType: "application/pdf",
+            Title: "Updated",
+            Content: "content",
             Summary: "new summary",
             Tags: new List<string> { "tagX" });
 
