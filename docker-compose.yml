@@ -1,15 +1,12 @@
-
-
 services:
   # Database
-  postgres:
+  paperless-postgres:
     image: postgres:17.5
     container_name: paperless-postgres
     environment:
       - POSTGRES_DB=paperless
       - POSTGRES_USER=paperless
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-
     ports:
       - "5432:5432"
     volumes:
@@ -20,82 +17,15 @@ services:
       - paperless-network
     restart: unless-stopped
 
-  # # Message Broker
-  # rabbitmq:
-  #   image: rabbitmq:3-management
-  #   container_name: paperless-rabbitmq
-  #   environment:
-  #     - RABBITMQ_DEFAULT_USER=paperless
-  #     - RABBITMQ_DEFAULT_PASS_FILE=/run/secrets/rabbit_password
-  #   ports:
-  #     - "5672:5672"   # AMQP protocol
-  #     - "15672:15672" # Management console (corrected from 9093)
-  #   volumes:
-  #     - rabbitmq_data:/var/lib/rabbitmq
-  #   secrets:
-  #     - rabbit_password
-  #   networks:
-  #     - paperless-network
-  #   restart: unless-stopped
-
-  # # Object Storage
-  # minio:
-  #   image: minio/minio
-  #   container_name: paperless-minio
-  #   environment:
-  #     MINIO_ROOT_USER=paperless
-  #     MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
-  #   ports:
-  #     - "9000:9000" # API
-  #     - "9001:9001" # Console (corrected from 9090)
-  #   command: server /data --console-address ":9001"
-  #   volumes:
-  #     - minio_data:/data
-  #   secrets:
-  #     - minio_password
-  #   networks:
-  #     - paperless-network
-  #   restart: unless-stopped
-
-  # # Search Engine
-  # elasticsearch:
-  #   image: elasticsearch:8.11.0
-  #   container_name: paperless-elasticsearch
-  #   environment:
-  #     - discovery.type=single-node
-  #     - xpack.security.enabled=false
-  #     - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
-  #   ports:
-  #     - "9200:9200"
-  #   volumes:
-  #     - elasticsearch_data:/usr/share/elasticsearch/data
-  #   networks:
-  #     - paperless-network
-  #   restart: unless-stopped
-
-  # # Database Management
-  # adminer:
-  #   image: adminer
-  #   container_name: paperless-adminer
-  #   ports:
-  #     - "9091:8080"
-  #   environment:
-  #     ADMINER_DEFAULT_SERVER: postgres
-  #   networks:
-  #     - paperless-network
-  #   restart: unless-stopped
-
   # .NET Services
-  paperless-webui:
+  paperless-backend:
     build:
       context: ./paperless/src/paperless
       dockerfile: Dockerfile
-    container_name: paperless-webui
+    container_name: paperless-backend
     volumes:
       - ./logs:/app/logs
     ports:
-      - "80:80"
-      - "443:443"
       - "5001:5001"
       - "7081:7081"
     environment:
@@ -106,82 +36,26 @@ services:
       - POSTGRES_DATABASE=paperless
       - POSTGRES_USERNAME=paperless
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
-      # - RabbitMQ__Host=rabbitmq
-      # - RabbitMQ__Username=paperless
-      # - RabbitMQ__Password=/run/secrets/rabbit_password
-      # - Elasticsearch__Url=http://elasticsearch:9200
-      # - MinIO__Endpoint=minio:9000
-      # - MinIO__AccessKey=paperless
-      # - MinIO__SecretKey=/run/secrets/minio_password
     depends_on:
-      - postgres
-    #   - rabbitmq
-    #   - elasticsearch
-    #   - minio
+      - paperless-postgres
     secrets:
       - postgres_password
-    # - rabbit_password
-    # - minio_password
     networks:
       - paperless-network
     restart: unless-stopped
 
-  # paperless-services:
-  #   build:
-  #     context: ./PaperlessServices
-  #     dockerfile: Dockerfile
-  #   container_name: paperless-services
-  #   ports:
-  #     - "8082:8080"
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - RabbitMQ__Host=rabbitmq
-  #     - RabbitMQ__Username=paperless
-  #     - RabbitMQ__Password=/run/secrets/rabbit_password
-  #     - Elasticsearch__Url=http://elasticsearch:9200
-  #     - MinIO__Endpoint=minio:9000
-  #     - MinIO__AccessKey=paperless
-  #     - MinIO__SecretKey=/run/secrets/minio_password
-  #   depends_on:
-  #     - postgres
-  #     - rabbitmq
-  #     - elasticsearch
-  #     - minio
-  #   secrets:
-  #     - postgres_password
-  #     - rabbit_password
-  #     - minio_password
-  #   networks:
-  #     - paperless-network
-  #   restart: unless-stopped
-
-  # peri-worker:
-  #   build:
-  #     context: ./PeriWorker
-  #     dockerfile: Dockerfile
-  #   container_name: peri-worker
-  #   environment:
-  #     - ASPNETCORE_ENVIRONMENT=Development
-  #     - RabbitMQ__Host=rabbitmq
-  #     - RabbitMQ__Username=paperless
-  #     - RabbitMQ__Password=/run/secrets/rabbit_password
-  #     - Gemini__ApiKey=${GEMINI_API_KEY:-}
-  #     - Elasticsearch__Url=http://elasticsearch:9200
-  #     - MinIO__Endpoint=minio:9000
-  #     - MinIO__AccessKey=paperless
-  #     - MinIO__SecretKey=/run/secrets/minio_password
-  #   depends_on:
-  #     - postgres
-  #     - rabbitmq
-  #     - elasticsearch
-  #     - minio
-  #   secrets:
-  #     - postgres_password
-  #     - rabbit_password
-  #     - minio_password
-  #   networks:
-  #     - paperless-network
-  #   restart: unless-stopped
+  paperless-frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: paperless-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - paperless-backend
+    networks:
+      - paperless-network
+    restart: unless-stopped
 
 secrets:
   postgres_password:
@@ -197,6 +71,3 @@ networks:
 
 volumes:
   postgres_data:
-#   rabbitmq_data:
-#   minio_data:
-#   elasticsearch_data:
