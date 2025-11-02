@@ -1,3 +1,5 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using Microsoft.EntityFrameworkCore;
 using paperless.Api;
 using Paperless.DAL;
@@ -11,6 +13,8 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<MappingProfile>();
 }, typeof(Program).Assembly);
 builder.Services.AddControllers();
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddOpenApi();
 builder.Services.AddDbContext<DataContext>(options => 
 { 
