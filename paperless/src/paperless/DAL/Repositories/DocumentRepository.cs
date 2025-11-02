@@ -1,4 +1,5 @@
-﻿using Paperless.DAL.Models;
+﻿using Microsoft.EntityFrameworkCore;
+using Paperless.DAL.Models;
 
 namespace Paperless.DAL.Repositories
 {
@@ -6,7 +7,7 @@ namespace Paperless.DAL.Repositories
     {
         #region Constructors
         public DocumentRepository(DataContext db)
-        { 
+        {
             _db = db;
         }
         #endregion
@@ -16,51 +17,43 @@ namespace Paperless.DAL.Repositories
         #endregion
 
         #region CRUD Operations
-        public void CreateOrUpdate(DocumentModel document)
+        public async Task CreateOrUpdateAsync(DocumentModel document, CancellationToken ct = default)
         {
-            DocumentModel? dbDocument = _db.Documents.FirstOrDefault(d => d.Id == document.Id);
-            if (dbDocument == null)
+            var existing = await _db.Documents
+                .FirstOrDefaultAsync(d => d.Id == document.Id, ct);
+
+            if (existing is null)
             {
-                _db.Documents.Add(document);
+                await _db.Documents.AddAsync(document, ct);
             }
             else
             {
-                dbDocument.Update(document.Title, document.Content, document.Summary, document.Tags);
+                existing.Update(document.Title, document.Content, document.Summary, document.Tags);
             }
-            _db.SaveChanges();
         }
 
-        public List<DocumentModel> ReadAll()
-        {
-            return _db.Documents.ToList();
-        }
+        public Task<List<DocumentModel>> ReadAllAsync(CancellationToken ct = default) =>
+        _db.Documents.AsNoTracking().ToListAsync(ct);
 
-        public DocumentModel? ReadById(Guid id)
-        {
-            return _db.Documents.FirstOrDefault(d => d.Id == id);
-        }
+        public Task<DocumentModel?> ReadByIdAsync(Guid id, CancellationToken ct = default) =>
+        _db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id, ct);
 
-        public List<DocumentModel> ReadByTitle(string title)
-        {
-            return _db.Documents
-                .Where(d => d.Title.Contains(title))
-                .ToList();
-        }
+        public Task<List<DocumentModel>> ReadByTitleAsync(string title, CancellationToken ct = default) =>
+        _db.Documents
+           .AsNoTracking()
+           .Where(d => EF.Functions.Like(d.Title, $"%{title}%"))
+           .ToListAsync(ct);
 
-        public void DeleteAll()
-        {
-            _db.Documents.RemoveRange(_db.Documents);
-            _db.SaveChanges();
-        }
+        public Task<int> DeleteAllAsync(CancellationToken ct = default) =>
+        _db.Documents.ExecuteDeleteAsync(ct);
 
-        public void DeleteById(Guid id)
+        public async Task<bool> DeleteByIdAsync(Guid id, CancellationToken ct = default)
         {
-            DocumentModel? document = _db.Documents.FirstOrDefault(d => d.Id == id);
-            if (document != null)
-            {
-                _db.Documents.Remove(document);
-                _db.SaveChanges();
-            }
+            var deleted = await _db.Documents
+                .Where(d => d.Id == id)
+                .ExecuteDeleteAsync(ct);
+            if (deleted > 0) return true;
+            return false;
         }
         #endregion
     }

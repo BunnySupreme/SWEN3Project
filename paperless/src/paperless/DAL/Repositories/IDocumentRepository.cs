@@ -1,13 +1,13 @@
-﻿namespace Paperless.DAL.Repositories;
+﻿using Paperless.DAL.Models;
 
-using Paperless.DAL.Models;
+namespace Paperless.DAL.Repositories;
 
 public interface IDocumentRepository
 {
-    void CreateOrUpdate(DocumentModel document);
-    List<DocumentModel> ReadAll();
-    DocumentModel? ReadById(Guid id);
-    List<DocumentModel> ReadByTitle(string title);
-    void DeleteAll();
-    void DeleteById(Guid id);
+    Task CreateOrUpdateAsync(DocumentModel document, CancellationToken ct = default);
+    Task<List<DocumentModel>> ReadAllAsync(CancellationToken ct = default);
+    Task<DocumentModel?> ReadByIdAsync(Guid id, CancellationToken ct = default);
+    Task<List<DocumentModel>> ReadByTitleAsync(string title, CancellationToken ct = default);
+    Task<int> DeleteAllAsync(CancellationToken ct = default);
+    Task<bool> DeleteByIdAsync(Guid id, CancellationToken ct = default);
 }
