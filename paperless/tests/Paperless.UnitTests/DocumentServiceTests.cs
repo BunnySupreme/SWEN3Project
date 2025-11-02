@@ -1,101 +1,142 @@
-﻿using FluentAssertions;
+﻿using AutoMapper;
+using Microsoft.EntityFrameworkCore;
 using Moq;
 using Paperless.Api;
-using Paperless.Services;
+using Paperless.DAL;
 using Paperless.DAL.Models;
 using Paperless.DAL.Repositories;
-using AutoMapper;
+using Paperless.Services;
 
 namespace Paperless.UnitTests;
 
 public class DocumentServiceTests
 {
     private readonly Mock<IDocumentRepository> _repoMock;
+    private readonly Mock<DataContext> _dbMock; 
     private readonly Mock<IMapper> _mapperMock;
     private readonly DocumentService _service;
 
     public DocumentServiceTests()
     {
+        var options = new DbContextOptionsBuilder<DataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+
+        _dbMock = new Mock<DataContext>(options) { CallBase = true };
+        _dbMock
+            .Setup(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(1);
+
         _repoMock = new Mock<IDocumentRepository>();
+
         _mapperMock = new Mock<IMapper>();
-        _service = new DocumentService(_repoMock.Object, _mapperMock.Object);
+
+        _service = new DocumentService(_repoMock.Object, _dbMock.Object, _mapperMock.Object);
     }
 
     [Fact]
     public async Task ListAsync_ShouldReturnMappedDtos()
     {
         var docs = new List<DocumentModel>
-    {
-        new DocumentModel(), // older
-        new DocumentModel()  // newer
-    };
-        docs[0].Update("File B", "content", "summary", "tag2");
-        docs[1].Update("File A", "content", "summary", "tag1");
+        {
+            new DocumentModel(), // older
+            new DocumentModel()  // newer
+        };
+        docs[0].Update("File B", "summary", "tag2");
+        docs[1].Update("File A", "summary", "tag1");
 
-        _repoMock.Setup(r => r.ReadAll()).Returns(docs);
+        _repoMock
+            .Setup(r => r.ReadAllAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(docs);
 
         var result = await _service.ListAsync(null, 0, 50, CancellationToken.None);
 
-        // Assert
-        result.Should().HaveCount(2);
-        result[0].Title.Should().Be("File A");
-        result[1].Title.Should().Be("File B");
+        Assert.Equal(2, result.Count);
+        Assert.Equal("File A", result[0].Title);
+        Assert.Equal("File B", result[1].Title);
     }
 
     [Fact]
     public async Task GetAsync_ShouldReturnDto_WhenFound()
     {
         var doc = new DocumentModel();
-        doc.Update("Some File", "c", "s", "t");
-        _repoMock.Setup(r => r.ReadById(doc.Id)).Returns(doc);
+        doc.Update("Some File", "s", "t");
+
+        _repoMock
+            .Setup(r => r.ReadByIdAsync(doc.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(doc);
 
         var result = await _service.GetAsync(doc.Id, CancellationToken.None);
 
-        result.Should().NotBeNull();
-        result!.Title.Should().Be("Some File");
+        Assert.NotNull(result);
+        Assert.Equal("Some File", result!.Title);
     }
 
     [Fact]
     public async Task CreateAsync_ShouldCallRepositoryAndReturnDto()
     {
-        var createDto = new DocumentCreateDto("NewFile", "application/pdf", "sum", new List<string> { "tag1" });
+        var createDto = new DocumentCreateDto(
+            Title: "NewFile",
+            Summary: "sum",
+            Tags: new List<string> { "tag1" });
+
+        _repoMock
+            .Setup(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
 
         var result = await _service.CreateAsync(createDto, CancellationToken.None);
 
-        _repoMock.Verify(r => r.CreateOrUpdate(It.IsAny<DocumentModel>()), Times.Once);
-        result.Title.Should().Be("NewFile");
+        _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal("NewFile", result.Title);
     }
 
     [Fact]
     public async Task UpdateAsync_ShouldReturnTrue_WhenDocumentExists()
     {
         var existing = new DocumentModel();
-        existing.Update("Old", "c", "s", "t");
+        existing.Update("Old", "s", "t");
 
-        _repoMock.Setup(r => r.ReadById(existing.Id)).Returns(existing);
+        _repoMock
+            .Setup(r => r.ReadByIdAsync(existing.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(existing);
 
-        var dto = new DocumentUpdateDto(existing.Id, "Updated", "application/pdf", "new summary", new List<string> { "tagX" });
+        _repoMock
+            .Setup(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var dto = new DocumentUpdateDto(
+            Id: existing.Id,
+            Title: "Updated",
+            Summary: "new summary",
+            Tags: new List<string> { "tagX" });
 
         var result = await _service.UpdateAsync(dto, CancellationToken.None);
 
-        result.Should().BeTrue();
-        _repoMock.Verify(r => r.CreateOrUpdate(It.Is<DocumentModel>(d => d.Title == "Updated")), Times.Once);
+        Assert.True(result);
+        _repoMock.Verify(
+            r => r.CreateOrUpdateAsync(
+                It.Is<DocumentModel>(d => d.Title == "Updated"),
+                It.IsAny<CancellationToken>()),
+            Times.Once);
     }
 
     [Fact]
     public async Task DeleteAsync_ShouldCallDeleteById()
     {
         var id = Guid.NewGuid();
-        var doc = new DocumentModel();
-        typeof(DocumentModel).GetProperty(nameof(DocumentModel.Id))!.SetValue(doc, id);
+        var doc = new DocumentModel { Id = id };
 
-        _repoMock.Setup(r => r.ReadById(id)).Returns(doc);
-        _repoMock.Setup(r => r.DeleteById(id));
+        _repoMock
+            .Setup(r => r.ReadByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(doc);
+
+        _repoMock
+            .Setup(r => r.DeleteByIdAsync(id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
 
         var result = await _service.DeleteAsync(id, CancellationToken.None);
 
-        result.Should().BeTrue();
-        _repoMock.Verify(r => r.DeleteById(id), Times.Once);
+        Assert.True(result);
+        _repoMock.Verify(r => r.DeleteByIdAsync(id, It.IsAny<CancellationToken>()), Times.Once);
     }
-
 }

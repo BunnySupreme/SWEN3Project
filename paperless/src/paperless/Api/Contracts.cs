@@ -1,5 +1,6 @@
 namespace Paperless.Api;
 
+// Contracts
 public sealed record DocumentReadDto(
 	Guid Id,
 	string Title,

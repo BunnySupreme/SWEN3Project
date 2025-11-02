@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using Paperless.Services;
 
 namespace Paperless.Api.Controllers;
@@ -13,9 +13,9 @@ public class DocumentsController : ControllerBase
 
     public DocumentsController(IDocumentService svc) => _svc = svc;
 
-    // ---------------------------------------------
+    // ─────────────────────────────────────────────
     // LIST
-    // ---------------------------------------------
+    // ─────────────────────────────────────────────
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<DocumentReadDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -32,9 +32,9 @@ public class DocumentsController : ControllerBase
         return Ok(docs);
     }
 
-    // ---------------------------------------------
+    // ─────────────────────────────────────────────
     // GET
-    // ---------------------------------------------
+    // ─────────────────────────────────────────────
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(DocumentReadDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -44,9 +44,9 @@ public class DocumentsController : ControllerBase
         return doc is null ? NotFound() : Ok(doc);
     }
 
-    // ---------------------------------------------
+    // ─────────────────────────────────────────────
     // CREATE (JSON)
-    // ---------------------------------------------
+    // ─────────────────────────────────────────────
     [HttpPost]
     [ProducesResponseType(typeof(DocumentReadDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -58,25 +58,42 @@ public class DocumentsController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
-    // ---------------------------------------------
-    // UPLOAD (MULTIPART)
-    // ---------------------------------------------
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(DocumentReadDto), StatusCodes.Status201Created)]
-    public async Task<ActionResult<DocumentReadDto>> Upload([FromForm] IFormFile file, CancellationToken ct = default)
+    public async Task<ActionResult<DocumentReadDto>> Upload(
+        [FromForm] IFormFile file,
+        [FromForm] string? title,
+        [FromForm] string? tags,
+        CancellationToken ct = default)
     {
-        if (file is null || file.Length == 0)
+        if (file == null || file.Length == 0)
             return BadRequest(new { message = "No file uploaded" });
 
-        var created = await _svc.UploadAsync(file, ct);
+        var normalizedTitle = string.IsNullOrWhiteSpace(title)
+            ? Path.GetFileName(file.FileName)
+            : title.Trim();
 
+        var tagList = string.IsNullOrWhiteSpace(tags)
+            ? Array.Empty<string>()
+            : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        // Sprint 3: store in MiniIO
+        var createDto = new DocumentCreateDto(
+            Title: normalizedTitle,
+            Summary: string.Empty,
+            Tags: tagList
+        );
+
+        var created = await _svc.CreateAsync(createDto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
-    // ---------------------------------------------
+
+
+    // ─────────────────────────────────────────────
     // UPDATE
-    // ---------------------------------------------
+    // ─────────────────────────────────────────────
     [HttpPut("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -92,9 +109,9 @@ public class DocumentsController : ControllerBase
         return ok ? NoContent() : NotFound();
     }
 
-    // ---------------------------------------------
+    // ─────────────────────────────────────────────
     // DELETE
-    // ---------------------------------------------
+    // ─────────────────────────────────────────────
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]

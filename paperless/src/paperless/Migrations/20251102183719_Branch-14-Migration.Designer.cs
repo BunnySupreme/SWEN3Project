@@ -12,8 +12,13 @@ using Paperless.DAL;
 namespace paperless.Migrations
 {
     [DbContext(typeof(DataContext))]
+<<<<<<<< HEAD:paperless/src/paperless/Migrations/20251102183719_Branch-14-Migration.Designer.cs
     [Migration("20251102183719_Branch-14-Migration")]
     partial class Branch14Migration
+========
+    [Migration("20251015144305_InitialCreate2")]
+    partial class InitialCreate2
+>>>>>>>> main:paperless/src/paperless/Migrations/20251015144305_InitialCreate2.Designer.cs
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
