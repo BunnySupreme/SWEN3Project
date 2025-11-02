@@ -1,5 +1,4 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Paperless.Api.Contracts;
 using Paperless.Services;
 
 namespace Paperless.Api.Controllers;
@@ -82,7 +81,6 @@ public class DocumentsController : ControllerBase
         // Sprint 3: store in MiniIO
         var createDto = new DocumentCreateDto(
             Title: normalizedTitle,
-            Content: string.Empty,
             Summary: string.Empty,
             Tags: tagList
         );

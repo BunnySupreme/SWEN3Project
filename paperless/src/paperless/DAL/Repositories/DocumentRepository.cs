@@ -1,13 +1,13 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using paperless.DAL.Models;
+using Paperless.DAL.Models;
 
-namespace paperless.DAL.Repositories
+namespace Paperless.DAL.Repositories
 {
     public class DocumentRepository : IDocumentRepository
     {
         #region Constructors
         public DocumentRepository(DataContext db)
-        { 
+        {
             _db = db;
         }
         #endregion
@@ -17,7 +17,7 @@ namespace paperless.DAL.Repositories
         #endregion
 
         #region CRUD Operations
-        public async Task CreateOrUpdateAsync(Document document, CancellationToken ct = default)
+        public async Task CreateOrUpdateAsync(DocumentModel document, CancellationToken ct = default)
         {
             var existing = await _db.Documents
                 .FirstOrDefaultAsync(d => d.Id == document.Id, ct);
@@ -28,17 +28,17 @@ namespace paperless.DAL.Repositories
             }
             else
             {
-                existing.Update(document.Title, document.Content, document.Summary, document.Tags);
+                existing.Update(document.Title, document.Summary, document.Tags);
             }
         }
 
-        public Task<List<Document>> ReadAllAsync(CancellationToken ct = default) =>
+        public Task<List<DocumentModel>> ReadAllAsync(CancellationToken ct = default) =>
         _db.Documents.AsNoTracking().ToListAsync(ct);
 
-        public Task<Document?> ReadByIdAsync(Guid id, CancellationToken ct = default) =>
+        public Task<DocumentModel?> ReadByIdAsync(Guid id, CancellationToken ct = default) =>
         _db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id, ct);
 
-        public Task<List<Document>> ReadByTitleAsync(string title, CancellationToken ct = default) =>
+        public Task<List<DocumentModel>> ReadByTitleAsync(string title, CancellationToken ct = default) =>
         _db.Documents
            .AsNoTracking()
            .Where(d => EF.Functions.Like(d.Title, $"%{title}%"))

@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace paperless.Migrations
 {
     /// <inheritdoc />
-    public partial class InitialCreate2 : Migration
+    public partial class Branch14Migration : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -16,11 +16,10 @@ namespace paperless.Migrations
                 columns: table => new
                 {
                     id = table.Column<Guid>(type: "uuid", nullable: false),
-                    title = table.Column<string>(type: "text", nullable: false),
-                    content = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    title = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
                     summary = table.Column<string>(type: "text", nullable: false),
                     tags = table.Column<string>(type: "text", nullable: false),
-                    creationdate = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                    uploadedat = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
                 {

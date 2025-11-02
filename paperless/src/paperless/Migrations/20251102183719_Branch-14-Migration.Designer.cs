@@ -5,15 +5,15 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
-using paperless.DAL;
+using Paperless.DAL;
 
 #nullable disable
 
 namespace paperless.Migrations
 {
     [DbContext(typeof(DataContext))]
-    [Migration("20251015144305_InitialCreate2")]
-    partial class InitialCreate2
+    [Migration("20251102183719_Branch-14-Migration")]
+    partial class Branch14Migration
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -25,22 +25,12 @@ namespace paperless.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("paperless.DAL.Models.Document", b =>
+            modelBuilder.Entity("Paperless.DAL.Models.DocumentModel", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid")
                         .HasColumnName("id");
-
-                    b.Property<string>("Content")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("character varying(255)")
-                        .HasColumnName("content");
-
-                    b.Property<DateTimeOffset>("CreationDate")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("creationdate");
 
                     b.Property<string>("Summary")
                         .IsRequired()
@@ -54,8 +44,13 @@ namespace paperless.Migrations
 
                     b.Property<string>("Title")
                         .IsRequired()
-                        .HasColumnType("text")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
                         .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("uploadedat");
 
                     b.HasKey("Id");
 

@@ -1,9 +1,12 @@
+using FluentValidation;
+using FluentValidation.AspNetCore;
 using log4net;
 using log4net.Config;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
-using paperless.DAL;
-using paperless.DAL.Repositories;
+using paperless.Api;
+using Paperless.DAL;
+using Paperless.DAL.Repositories;
 using Paperless.Services;
 using System.Text.Json;
 
@@ -14,10 +17,19 @@ var programLogger = LogManager.GetLogger(typeof(Program));
 // Build the app
 programLogger.Info("=== Paperless Application Building ===");
 var builder = WebApplication.CreateBuilder(args);
+builder.Services.AddAutoMapper(cfg =>
+{
+    cfg.AddProfile<MappingProfile>();
+}, typeof(Program).Assembly);
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
+builder.Services.AddValidatorsFromAssemblyContaining<Program>();
+builder.Services.AddFluentValidationAutoValidation();
 builder.Services.AddOpenApi();
-builder.Services.AddDbContext<DataContext>(options => { options.UseNpgsql(Configuration.PostgresConnectionString); });
+builder.Services.AddDbContext<DataContext>(options =>
+{
+    options.UseNpgsql(Configuration.PostgresConnectionString);
+});
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 var app = builder.Build();
@@ -69,7 +81,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/openapi/v1.json", "Paperless v1 API");
+        c.RoutePrefix = "api/swagger"; // so UI is under /api/swagger
+        c.SwaggerEndpoint("/api/swagger/v1/swagger.json", "v1");
     });
 }
 

@@ -1,7 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using paperless.DAL.Models;
+using Paperless.DAL.Models;
 
-namespace paperless.DAL
+namespace Paperless.DAL
 {
     public class DataContext : DbContext
     {
@@ -10,7 +10,7 @@ namespace paperless.DAL
         #endregion
 
         #region DbSets
-        public DbSet<Document> Documents { get; set; }
+        public DbSet<DocumentModel> Documents { get; set; }
         #endregion
 
         #region Builders
