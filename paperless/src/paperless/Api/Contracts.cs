@@ -1,24 +1,22 @@
-using System.ComponentModel.DataAnnotations;
-
 namespace Paperless.Api;
 
 public sealed record DocumentReadDto(
-	[Required] Guid Id,
-	[Required][StringLength(255)] string Title,
-	[Required] string Content,
-	[Required] string Summary,
+	Guid Id,
+	string Title,
+	string Content,
+	string Summary,
 	IReadOnlyList<string>? Tags,
-	[Required] DateTimeOffset UploadedAt);
+	DateTimeOffset UploadedAt);
 
 public sealed record DocumentCreateDto(
-	[Required][StringLength(255)] string Title,
-	[Required] string Content,
-	[Required] string Summary,
+	string Title,
+	string Content,
+	string Summary,
 	IReadOnlyList<string>? Tags);
 
 public sealed record DocumentUpdateDto(
-	[Required] Guid Id,
-	[Required][StringLength(255)] string Title,
-	[Required] string Content,
-	[Required] string Summary,
+	Guid Id,
+	string Title,
+	string Content,
+	string Summary,
 	IReadOnlyList<string>? Tags);

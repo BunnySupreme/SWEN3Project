@@ -24,6 +24,16 @@ namespace paperless.Api.Validators
 
             RuleFor(x => x.Summary)
                 .NotEmpty().WithMessage("Summary is required");
+
+            When(x => x.Tags != null && x.Tags.Count > 0, () =>
+            {
+                RuleFor(x => x.Tags)
+                    .Must(tags => tags!.Count <= 10).WithMessage("A maximum of 10 tags are allowed");
+
+                RuleForEach(x => x.Tags)
+                    .NotEmpty().WithMessage("Empty tags are not allowed")
+                    .MaximumLength(30).WithMessage("Each tag must not exceed 30 characters");
+            });
         }
         #endregion
     }
