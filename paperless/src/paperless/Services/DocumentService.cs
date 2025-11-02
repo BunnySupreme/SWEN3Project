@@ -52,27 +52,34 @@ public sealed class DocumentService : IDocumentService
     {
         var entity = new Document();
         entity.Update(
-            title: dto.FileName,
-            content: string.Empty,
+            title: dto.Title,
+            content: dto.Content ?? string.Empty,
             summary: dto.Summary ?? string.Empty,
-            tags: ToCsv(dto.Tags));
+            tags: ToCsv(dto.Tags)
+        );
 
         await _repo.CreateOrUpdateAsync(entity, ct);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(ct);
 
-        return MapToReadDto(entity, dto.ContentType ?? "application/pdf");
+        return MapToReadDto(entity, contentType: "application/pdf");
     }
+
 
     // ─────────────────────────────────────────────
     // UPLOAD (MULTIPART)
     // ─────────────────────────────────────────────
     public async Task<DocumentReadDto> UploadAsync(IFormFile file, CancellationToken ct)
     {
-        // Reuse Create logic so behavior stays consistent
+        using var memoryStream = new MemoryStream();
+        await file.CopyToAsync(memoryStream, ct);
+
+        byte[] fileBytes = memoryStream.ToArray();
+        string fileContent = Convert.ToBase64String(fileBytes);
+
         var dto = new DocumentCreateDto
         (
-            FileName: Path.GetFileName(file.FileName),
-            ContentType: file.ContentType,
+            Title: Path.GetFileName(file.FileName),
+            Content: fileContent,
             Summary: string.Empty,
             Tags: Array.Empty<string>()
         );
@@ -91,7 +98,7 @@ public sealed class DocumentService : IDocumentService
         if (entity is null) return false;
 
         entity.Update(
-            title: dto.FileName,
+            title: dto.Title,
             content: entity.Content,
             summary: dto.Summary ?? string.Empty,
             tags: ToCsv(dto.Tags));
@@ -123,9 +130,15 @@ public sealed class DocumentService : IDocumentService
             : string.Join(',', tags);
 
     private static DocumentReadDto MapToReadDto(Document d, string? contentType = null) =>
-        new(
-            Id: d.Id,
-            Title: d.Title,
-            CreatedAt: d.CreationDate
-        );
+    new(
+        Id: d.Id,
+        Title: d.Title,
+        Content: d.Content,
+        Summary: d.Summary,
+        UploadedAt: d.CreationDate,
+        Tags: string.IsNullOrWhiteSpace(d.Tags)
+            ? Array.Empty<string>()
+            : d.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    );
+
 }

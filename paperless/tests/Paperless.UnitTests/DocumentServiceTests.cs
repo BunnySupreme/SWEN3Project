@@ -72,7 +72,7 @@ public class DocumentServiceTests
     public async Task CreateAsync_ShouldCallRepositoryAndReturnDto()
     {
         var createDto = new DocumentCreateDto(
-            FileName: "NewFile",
+            Title: "NewFile",
             ContentType: "application/pdf",
             Summary: "sum",
             Tags: new List<string> { "tag1" });

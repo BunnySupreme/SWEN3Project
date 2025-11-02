@@ -34,7 +34,7 @@
                 }
                 else
                 {
-                    password = "1844F9E6ECF221FE8A5CC8AC000D2E78"; // Default hard-coded password (for development only)
+                    throw new FileNotFoundException("ERROR: Postgres password not found in environment variable or file.");
                 }
             }
 

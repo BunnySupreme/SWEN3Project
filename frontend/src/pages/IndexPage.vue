@@ -4,6 +4,7 @@
       <div class="text-h5">Documents</div>
       <q-btn color="primary" label="Upload" :to="{ name: 'upload' }" />
     </div>
+
     <q-table
       :rows="rows"
       :columns="columns"
@@ -17,24 +18,39 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
-import { listDocuments } from 'src/api/client';
 import { useRouter } from 'vue-router';
 import type { QTableColumn } from 'quasar';
-import type { DocumentDto } from 'src/api/client';
+import { listDocuments, type DocumentReadDto } from 'src/api/client';
 
 const router = useRouter();
-const rows = ref<DocumentDto[]>([]);
+const rows = ref<DocumentReadDto[]>([]);
 const loading = ref(false);
 
-const columns: QTableColumn<DocumentDto>[] = [
-  { name: 'title', label: 'Title', field: 'title', align: 'left', sortable: true },
-  { name: 'createdAt', label: 'Created', field: 'createdAt', align: 'left',
-    format: v => new Date(v).toLocaleString(), sortable: true },
-  { name: 'sizeBytes', label: 'Size (B)', field: 'sizeBytes', align: 'right',
-    format: v => v?.toLocaleString() ?? '', sortable: true },
+const columns: QTableColumn<DocumentReadDto>[] = [
+  {
+    name: 'title',
+    label: 'Title',
+    field: (row) => row.title,
+    align: 'left',
+    sortable: true
+  },
+  {
+    name: 'tags',
+    label: 'Tags',
+    field: (row) => row.tags?.join(', ') ?? '',
+    align: 'left',
+    sortable: false
+  },
+  {
+    name: 'uploadedAt',
+    label: 'Uploaded',
+    field: (row) => new Date(row.uploadedAt).toLocaleString(),
+    align: 'left',
+    sortable: true
+  }
 ];
 
-function goDetail(_evt: unknown, row: DocumentDto) {
+function goDetail(_evt: unknown, row: DocumentReadDto) {
   void router.push({ name: 'docDetail', params: { id: row.id } });
 }
 
