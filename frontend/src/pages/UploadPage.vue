@@ -73,11 +73,6 @@ const tagsRule = (v: string) => {
   return true;
 };
 
-type UploaderRejectedEntry = {
-  failedPropValidation: string;
-  file: File;
-};
-
 async function onSubmit() {
   const valid = await form.value.validate();
   if (!valid) return;
