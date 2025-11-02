@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using Paperless.Api;
 using Paperless.DAL;
 using Paperless.DAL.Models;
@@ -12,14 +13,23 @@ public sealed class DocumentService : IDocumentService
     private readonly IDocumentRepository _repo;
     private readonly DataContext _db;
     private readonly IMapper _mapper;
+    private readonly IValidator<DocumentCreateDto> _createValidator;
+    private readonly IValidator<DocumentUpdateDto> _updateValidator;
     #endregion
 
     #region Constructors
-    public DocumentService(IDocumentRepository repo, DataContext db, IMapper mapper)
+    public DocumentService(
+        IDocumentRepository repo,
+        DataContext db,
+        IMapper mapper,
+        IValidator<DocumentCreateDto> createValidator,
+        IValidator<DocumentUpdateDto> updateValidator)
     {
         _repo = repo;
         _db = db;
         _mapper = mapper;
+        _createValidator = createValidator;
+        _updateValidator = updateValidator;
     }
     #endregion
 
@@ -58,6 +68,8 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<DocumentReadDto> CreateAsync(DocumentCreateDto dto, CancellationToken ct = default)
     {
+        await _createValidator.ValidateAndThrowAsync(dto, ct);
+
         var entity = _mapper.Map<DocumentModel>(dto);
 
         await _repo.CreateOrUpdateAsync(entity, ct);
@@ -72,6 +84,9 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<DocumentReadDto> UploadAsync(IFormFile file, CancellationToken ct)
     {
+        if (file is null || file.Length == 0)
+            throw new ValidationException("File is required.");
+
         using var memoryStream = new MemoryStream();
         await file.CopyToAsync(memoryStream, ct);
 
@@ -85,6 +100,8 @@ public sealed class DocumentService : IDocumentService
             Tags: Array.Empty<string>()
         );
 
+        await _createValidator.ValidateAndThrowAsync(dto, ct);
+
         var created = await CreateAsync(dto, ct);
         // (Future: save file bytes / upload to MinIO here)
         return created;
@@ -95,6 +112,8 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
     {
+        await _updateValidator.ValidateAndThrowAsync(dto, ct);
+
         var entity = await _repo.ReadByIdAsync(dto.Id, ct);
         if (entity is null) return false;
 
