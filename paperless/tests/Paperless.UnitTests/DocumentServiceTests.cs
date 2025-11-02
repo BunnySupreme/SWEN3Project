@@ -1,4 +1,5 @@
 ﻿using AutoMapper;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Moq;
 using Paperless.Api;
@@ -14,6 +15,8 @@ public class DocumentServiceTests
     private readonly Mock<IDocumentRepository> _repoMock;
     private readonly Mock<DataContext> _dbMock; 
     private readonly Mock<IMapper> _mapperMock;
+    private readonly Mock<IValidator<DocumentCreateDto>> _createValidatorMock;
+    private readonly Mock<IValidator<DocumentUpdateDto>> _updateValidatorMock;
     private readonly DocumentService _service;
 
     public DocumentServiceTests()
@@ -50,7 +53,10 @@ public class DocumentServiceTests
                 return model;
             });
 
-        _service = new DocumentService(_repoMock.Object, _dbMock.Object, _mapperMock.Object);
+        _createValidatorMock = new Mock<IValidator<DocumentCreateDto>>();
+        _updateValidatorMock = new Mock<IValidator<DocumentUpdateDto>>();
+
+        _service = new DocumentService(_repoMock.Object, _dbMock.Object, _mapperMock.Object, _createValidatorMock.Object, _updateValidatorMock.Object);
     }
 
     [Fact]
@@ -106,6 +112,14 @@ public class DocumentServiceTests
             Summary: "sum",
             Tags: new List<string> { "tag1" });
 
+        // Ensure validator does not throw by returning a successful ValidationResult
+        _createValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+        _createValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<DocumentCreateDto>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+
         _repoMock
             .Setup(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()))
             .Returns<DocumentModel, CancellationToken>((doc, ct) =>
@@ -137,6 +151,14 @@ public class DocumentServiceTests
         _repoMock
             .Setup(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
+
+        // Ensure validator does not throw by returning a successful ValidationResult
+        _updateValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<DocumentUpdateDto>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
+        _updateValidatorMock
+            .Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<DocumentUpdateDto>>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new FluentValidation.Results.ValidationResult());
 
         var dto = new DocumentUpdateDto(
             Id: existing.Id,

@@ -40,15 +40,15 @@ public sealed class DocumentService : IDocumentService
         string? title, int skip, int take, CancellationToken ct = default)
     {
         var docs = string.IsNullOrWhiteSpace(title)
-            ? await _repo.ReadAllAsync()
-            : await _repo.ReadByTitleAsync(title);
+            ? await _repo.ReadAllAsync(ct)
+            : await _repo.ReadByTitleAsync(title, ct);
 
         return docs
             .OrderByDescending(d => d.UploadedAt)
             .ThenByDescending(d => d.Title)
             .Skip(skip)
             .Take(take)
-            .Select(_mapper.Map<DocumentReadDto>)
+            .Select(d => _mapper.Map<DocumentReadDto>(d))
             .ToList()
             .AsReadOnly();
     }
@@ -68,7 +68,9 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<DocumentReadDto> CreateAsync(DocumentCreateDto dto, CancellationToken ct = default)
     {
-        await _createValidator.ValidateAndThrowAsync(dto, ct);
+        var validation = await _createValidator.ValidateAsync(dto, ct);
+        if (!validation.IsValid)
+            throw new ValidationException(validation.Errors);
 
         var entity = _mapper.Map<DocumentModel>(dto);
 
@@ -90,9 +92,7 @@ public sealed class DocumentService : IDocumentService
         using var memoryStream = new MemoryStream();
         await file.CopyToAsync(memoryStream, ct);
 
-        byte[] fileBytes = memoryStream.ToArray();
-        string fileContent = Convert.ToBase64String(fileBytes);
-
+        // Build DTO from uploaded file
         var dto = new DocumentCreateDto
         (
             Title: Path.GetFileName(file.FileName),
@@ -100,8 +100,11 @@ public sealed class DocumentService : IDocumentService
             Tags: Array.Empty<string>()
         );
 
-        await _createValidator.ValidateAndThrowAsync(dto, ct);
+        var uploadValidation = await _createValidator.ValidateAsync(dto, ct);
+        if (!uploadValidation.IsValid)
+            throw new ValidationException(uploadValidation.Errors);
 
+        // CreateAsync validates again (mocks return valid) and persists
         var created = await CreateAsync(dto, ct);
         // (Future: save file bytes / upload to MinIO here)
         return created;
@@ -112,7 +115,9 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
     {
-        await _updateValidator.ValidateAndThrowAsync(dto, ct);
+        var validation = await _updateValidator.ValidateAsync(dto, ct);
+        if (!validation.IsValid)
+            throw new ValidationException(validation.Errors);
 
         var entity = await _repo.ReadByIdAsync(dto.Id, ct);
         if (entity is null) return false;
@@ -123,7 +128,7 @@ public sealed class DocumentService : IDocumentService
             tags: ToCsv(dto.Tags));
 
         await _repo.CreateOrUpdateAsync(entity, ct);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(ct);
         return true;
     }
 
@@ -136,7 +141,7 @@ public sealed class DocumentService : IDocumentService
         if (entity is null) return false;
 
         await _repo.DeleteByIdAsync(id, ct);
-        await _db.SaveChangesAsync();
+        await _db.SaveChangesAsync(ct);
         return true;
     }
 
