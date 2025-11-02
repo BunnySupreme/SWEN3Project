@@ -10,11 +10,11 @@ namespace paperless.Api
         public MappingProfile()
         {
             CreateMap<DocumentModel, DocumentReadDto>()
-                .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
-                .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
-                .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
-                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => SplitTags(src.Tags)))
-                .ForMember(dest => dest.UploadedAt, opt => opt.MapFrom(src => src.UploadedAt));
+               .ForCtorParam(nameof(DocumentReadDto.Id), opt => opt.MapFrom(src => src.Id))
+               .ForCtorParam(nameof(DocumentReadDto.Title), opt => opt.MapFrom(src => src.Title))
+               .ForCtorParam(nameof(DocumentReadDto.Summary), opt => opt.MapFrom(src => src.Summary))
+               .ForCtorParam(nameof(DocumentReadDto.Tags), opt => opt.MapFrom(src => SplitTags(src.Tags))) // <-- key fix
+               .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt));
 
             CreateMap<DocumentCreateDto, DocumentModel>()
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))

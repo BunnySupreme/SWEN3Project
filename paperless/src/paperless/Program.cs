@@ -81,7 +81,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
     app.UseSwaggerUI(c =>
     {
-        c.SwaggerEndpoint("/openapi/v1.json", "Paperless v1 API");
+        c.RoutePrefix = "api/swagger"; // so UI is under /api/swagger
+        c.SwaggerEndpoint("/api/swagger/v1/swagger.json", "v1");
     });
 }
 
