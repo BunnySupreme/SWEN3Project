@@ -76,15 +76,11 @@ using (var scope = app.Services.CreateScope())
 
 // Configure the HTTP request pipeline.
 programLogger.Info("=== HTTP Request Pipeline Configuring ===");
-if (app.Environment.IsDevelopment())
+app.MapOpenApi();
+app.UseSwaggerUI(c =>
 {
-    app.MapOpenApi();
-    app.UseSwaggerUI(c =>
-    {
-        c.RoutePrefix = "api/swagger"; // so UI is under /api/swagger
-        c.SwaggerEndpoint("/api/swagger/v1/swagger.json", "v1");
-    });
-}
+    c.SwaggerEndpoint("/openapi/v1.json", "Paperless v1 API");
+});
 
 // Map controllers
 programLogger.Info("=== Controllers Mapping ===");
