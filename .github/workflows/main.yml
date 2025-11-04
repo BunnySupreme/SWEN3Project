@@ -62,7 +62,7 @@ jobs:
         echo "${{ secrets.POSTGRES_PASSWORD }}" > secrets/postgres_password.txt
         echo "${{ secrets.MINIO_PASSWORD }}" > secrets/minio_password.txt
         
-        # Write RabbitMQ config with password
+        # Create or update RabbitMQ user and password in config
         sed -i '/^default_user/d' config/myrabbitmq.conf
         sed -i '/^default_pass/d' config/myrabbitmq.conf
         cat > config/myrabbitmq.conf << EOF
@@ -89,7 +89,9 @@ jobs:
       shell: bash
       run: |
         if [ -d secrets ]; then
-        rm -f secrets/postgres_password.txt secrets/rabbit_password.txt secrets/minio_password.txt
+        rm -f secrets/postgres_password.txt secrets/minio_password.txt
+        sed -i '/^default_user/d' config/myrabbitmq.conf
+        sed -i '/^default_pass/d' config/myrabbitmq.conf
         fi
 
   deploy:
