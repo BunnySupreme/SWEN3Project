@@ -56,12 +56,19 @@ jobs:
         --no-build
         --verbosity normal
 
-    - name: Create password files
+    - name: Create password files and config
       run: |
         mkdir -p secrets
         echo "${{ secrets.POSTGRES_PASSWORD }}" > secrets/postgres_password.txt
-        echo "${{ secrets.RABBIT_PASSWORD }}" > secrets/rabbit_password.txt
         echo "${{ secrets.MINIO_PASSWORD }}" > secrets/minio_password.txt
+        
+        # Write RabbitMQ config with password
+        sed -i '/^default_user/d' config/myrabbitmq.conf
+        sed -i '/^default_pass/d' config/myrabbitmq.conf
+        cat > config/myrabbitmq.conf << EOF
+        echo "default_user = paperless" >> config/myrabbitmq.conf
+        echo "default_pass = ${{ secrets.RABBIT_PASSWORD }}" >> config/myrabbitmq.conf
+        EOF
 
     - name: Build Docker images
       run: docker compose -f "docker-compose.yml" build
