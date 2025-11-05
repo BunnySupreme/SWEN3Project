@@ -19,3 +19,10 @@ Build using the docker-compose file: docker compose up -d --build
 8. Run where docker-compose.yml is located: docker compose down
 9. Run where docker-compose.yml is located: docker compose up -d --build
 10. C# Project will now apply the migration when starting up
+
+## RabbitMQ Setup
+1. Create config directory in repository root
+2. Create myrabbitmq.conf in config directory
+3. Add two lines to the conf file: (replace with credentials of your choice)
+    - default_user = 'myusername'
+    - default_pass = 'mypassword'

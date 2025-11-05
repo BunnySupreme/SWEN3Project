@@ -1,5 +1,4 @@
 services:
-  # Database
   paperless-postgres:
     image: postgres:17.5
     container_name: paperless-postgres
@@ -17,7 +16,20 @@ services:
       - paperless-network
     restart: unless-stopped
 
-  # .NET Services
+  paperless-rabbitmq:
+    image: rabbitmq:4.2.0-management
+    container_name: paperless-rabbitmq
+    environment:
+      - RABBITMQ_DEFAULT_USER=paperless
+    ports:
+      - "5672:5672" # RabbitMQ main port (AMQP protocol)
+      - "15672:15672" # Management console
+    volumes:
+      - ./config/myrabbitmq.conf:/etc/rabbitmq/rabbitmq.conf # Custom configuration file, .conf for new style format
+    networks:
+      - paperless-network
+    restart: unless-stopped
+
   paperless-backend:
     build:
       context: ./paperless/src/paperless
@@ -38,6 +50,7 @@ services:
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
     depends_on:
       - paperless-postgres
+      - paperless-rabbitmq
     secrets:
       - postgres_password
     networks:
