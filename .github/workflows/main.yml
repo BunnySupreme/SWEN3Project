@@ -59,16 +59,11 @@ jobs:
     - name: Create password files and config
       run: |
         mkdir -p secrets
+        mkdir -p config
         echo "${{ secrets.POSTGRES_PASSWORD }}" > secrets/postgres_password.txt
         echo "${{ secrets.MINIO_PASSWORD }}" > secrets/minio_password.txt
-        
-        # Create or update RabbitMQ user and password in config
-        sed -i '/^default_user/d' config/myrabbitmq.conf
-        sed -i '/^default_pass/d' config/myrabbitmq.conf
-        cat > config/myrabbitmq.conf << EOF
-        echo "default_user = paperless" >> config/myrabbitmq.conf
-        echo "default_pass = ${{ secrets.RABBIT_PASSWORD }}" >> config/myrabbitmq.conf
-        EOF
+        echo "default_user = 'paperless'
+        default_pass = '${{ secrets.RABBIT_PASSWORD }}'" > config/myrabbitmq.conf
 
     - name: Build Docker images
       run: docker compose -f "docker-compose.yml" build
@@ -89,9 +84,7 @@ jobs:
       shell: bash
       run: |
         if [ -d secrets ]; then
-        rm -f secrets/postgres_password.txt secrets/minio_password.txt
-        sed -i '/^default_user/d' config/myrabbitmq.conf
-        sed -i '/^default_pass/d' config/myrabbitmq.conf
+        rm -f secrets/postgres_password.txt secrets/minio_password.txt config/myrabbitmq.conf
         fi
 
   deploy:
