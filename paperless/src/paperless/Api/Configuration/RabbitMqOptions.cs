@@ -8,6 +8,4 @@
         public string Password { get; set; } = default!;
         public string QueueName { get; set; } = default!;
     }
-
-
 }
