@@ -1,78 +1,99 @@
-﻿using System.Reflection.Metadata;
+﻿using System.Text;
+using System.Text.Json;
+using Paperless.DAL.Models;
 using RabbitMQ.Client;
 
-namespace paperless.Services
+namespace Paperless.Services
 {
-    public sealed class RabbitProducerService
+    public sealed class RabbitProducerService : IRabbitProducerService, IAsyncDisposable
     {
-        #region Constructors
-        public RabbitProducerService(string host, int port, string username, string password, string queue)
-        {
-            Host = host;
-            Port = port;
-            Username = username;
-            Password = password;
-            Queue = queue;
-        }
-        #endregion
-
         #region Fields
         private IConnection? _connection;
         private IChannel? _channel;
         private BasicProperties? _properties;
+        private readonly string _host;
+        private readonly int _port;
+        private readonly string _username;
+        private readonly string _password;
+        private readonly string _queue;
+        private bool _initialized;
+        private readonly SemaphoreSlim _initLock = new(1,1); // For thread-safe initialization, only one thread can initialize at a time, prevents race conditions
         #endregion
 
-        #region Properties
-        private string Host { get; }
-        private int Port { get; }
-        private string Username { get; }
-        private string Password { get; }
-        private string Queue { get; }
+        #region Constructors
+        public RabbitProducerService(string host, int port, string username, string password, string queue)
+        {
+            _host = host;
+            _port = port;
+            _username = username;
+            _password = password;
+            _queue = queue;
+        }
         #endregion
 
         #region Methods
-        public async Task InitAsync()
+        private async Task InitAsync()
         {
-            var factory = new ConnectionFactory()
+            if (_initialized) return; // Prevents unnecessary locking if already initialized
+
+            await _initLock.WaitAsync();
+            try
             {
-                HostName = Host,
-                Port = Port,
-                UserName = Username,
-                Password = Password
-            };
+                if (_initialized) return; // Safety net
 
-            _connection = await factory.CreateConnectionAsync();
-            _channel = await _connection.CreateChannelAsync();
+                var factory = new ConnectionFactory()
+                {
+                    HostName = _host,
+                    Port = _port,
+                    UserName = _username,
+                    Password = _password
+                };
 
-            await _channel.QueueDeclareAsync(
-                queue: Queue,
-                durable: true,
-                exclusive: false,
-                autoDelete: false,
-                arguments: null);
+                _connection = await factory.CreateConnectionAsync();
+                _channel = await _connection.CreateChannelAsync();
 
-            _properties = new BasicProperties
+                await _channel.QueueDeclareAsync(
+                    queue: _queue,
+                    durable: true,
+                    exclusive: false,
+                    autoDelete: false,
+                    arguments: null);
+
+                _properties = new BasicProperties
+                {
+                    ContentType = "application/json",
+                    Persistent = true
+                };
+
+                _initialized = true;
+            }
+            finally
             {
-                ContentType = "application/json",
-                Persistent = true
-            };
+                _initLock.Release();
+            }
         }
 
-        public async Task RunAsync(CancellationToken ct, Document doc)
+        public async Task RunAsync(MessageModel message, CancellationToken ct = default)
         {
+            await InitAsync();
+
             if (_channel == null || _properties == null)
             {
-                throw new InvalidOperationException("RabbitProducerService is not initialized. Call InitAsync() before RunAsync().");
+                throw new InvalidOperationException("RabbitProducerService is not initialized.");
             }
 
-            while (!ct.IsCancellationRequested)
-            {
-                // Parse document to JSON
-                // Send to queue
-            }
+            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(message));
+
+            await _channel.BasicPublishAsync(
+                exchange: string.Empty,
+                routingKey: _queue,
+                mandatory: false,
+                basicProperties: _properties,
+                body: body,
+                cancellationToken: ct);
         }
 
-        public async Task CloseAsync()
+        public async ValueTask DisposeAsync()
         {
             if (_channel != null)
             {
@@ -84,6 +105,8 @@ namespace paperless.Services
                 await _connection.CloseAsync();
                 await _connection.DisposeAsync();
             }
+
+            _initLock.Dispose();
         }
         #endregion
     }

@@ -17,6 +17,7 @@ public class DocumentServiceTests
     private readonly Mock<IMapper> _mapperMock;
     private readonly Mock<IValidator<DocumentCreateDto>> _createValidatorMock;
     private readonly Mock<IValidator<DocumentUpdateDto>> _updateValidatorMock;
+    private readonly Mock<IRabbitProducerService> _rabbitProducerMock;
     private readonly DocumentService _service;
 
     public DocumentServiceTests()
@@ -56,7 +57,15 @@ public class DocumentServiceTests
         _createValidatorMock = new Mock<IValidator<DocumentCreateDto>>();
         _updateValidatorMock = new Mock<IValidator<DocumentUpdateDto>>();
 
-        _service = new DocumentService(_repoMock.Object, _dbMock.Object, _mapperMock.Object, _createValidatorMock.Object, _updateValidatorMock.Object);
+        _rabbitProducerMock = new Mock<IRabbitProducerService>();
+
+        _service = new DocumentService(
+            _repoMock.Object, 
+            _dbMock.Object, 
+            _mapperMock.Object, 
+            _createValidatorMock.Object, 
+            _updateValidatorMock.Object,
+            _rabbitProducerMock.Object);
     }
 
     [Fact]

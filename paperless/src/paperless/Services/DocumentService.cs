@@ -15,6 +15,7 @@ public sealed class DocumentService : IDocumentService
     private readonly IMapper _mapper;
     private readonly IValidator<DocumentCreateDto> _createValidator;
     private readonly IValidator<DocumentUpdateDto> _updateValidator;
+    private readonly IRabbitProducerService _rabbitProducer;
     #endregion
 
     #region Constructors
@@ -23,13 +24,15 @@ public sealed class DocumentService : IDocumentService
         DataContext db,
         IMapper mapper,
         IValidator<DocumentCreateDto> createValidator,
-        IValidator<DocumentUpdateDto> updateValidator)
+        IValidator<DocumentUpdateDto> updateValidator,
+        IRabbitProducerService rabbitProducer)
     {
         _repo = repo;
         _db = db;
         _mapper = mapper;
         _createValidator = createValidator;
         _updateValidator = updateValidator;
+        _rabbitProducer = rabbitProducer;
     }
     #endregion
 
@@ -60,6 +63,8 @@ public sealed class DocumentService : IDocumentService
     {
         var doc = await _repo.ReadByIdAsync(id, ct);
 
+        // ADD: Fetch associated file from MinIO (if necessary for this operation)
+
         return doc is null ? null : _mapper.Map<DocumentReadDto>(doc);
     }
 
@@ -77,7 +82,7 @@ public sealed class DocumentService : IDocumentService
         await _repo.CreateOrUpdateAsync(entity, ct);
         await _db.SaveChangesAsync(ct);
 
-        return MapToReadDto(entity, contentType: "application/pdf");
+        return _mapper.Map<DocumentReadDto>(entity);
     }
 
 
@@ -104,9 +109,18 @@ public sealed class DocumentService : IDocumentService
         if (!uploadValidation.IsValid)
             throw new ValidationException(uploadValidation.Errors);
 
-        // CreateAsync validates again (mocks return valid) and persists
-        var created = await CreateAsync(dto, ct);
-        // (Future: save file bytes / upload to MinIO here)
+        // DB (Initial, no summary, summary will be handled via RabbitConsumerService)
+        var created = await CreateAsync(dto, ct); // CreateAsync validates again (mocks return valid) and persists
+
+        // OCR Queue (Produce message for OCR)
+        MessageModel message = new MessageModel
+        {
+            DocumentId = created.Id,
+            DocumentTitle = created.Title,
+            QueuedAt = DateTimeOffset.UtcNow
+        };
+        await _rabbitProducer.RunAsync(message, ct);
+
         return created;
     }
 
@@ -152,16 +166,4 @@ public sealed class DocumentService : IDocumentService
         tags is null || tags.Count == 0
             ? string.Empty
             : string.Join(',', tags);
-
-    private static DocumentReadDto MapToReadDto(DocumentModel d, string? contentType = null) =>
-    new(
-        Id: d.Id,
-        Title: d.Title,
-        Summary: d.Summary,
-        UploadedAt: d.UploadedAt,
-        Tags: string.IsNullOrWhiteSpace(d.Tags)
-            ? Array.Empty<string>()
-            : d.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-    );
-
 }

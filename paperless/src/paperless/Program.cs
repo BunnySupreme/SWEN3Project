@@ -30,6 +30,27 @@ builder.Services.AddDbContext<DataContext>(options =>
 {
     options.UseNpgsql(Configuration.PostgresConnectionString);
 });
+builder.Services.AddSingleton<IRabbitProducerService>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new RabbitProducerService(
+        host: config["RabbitMQ:Host"] ?? "localhost",
+        port: int.Parse(config["RabbitMQ:Port"] ?? "5672"),
+        username: config["RabbitMQ:Username"] ?? "guest",
+        password: config["RabbitMQ:Password"] ?? "guest",
+        queue: config["RabbitMQ:Queue"] ?? "ocr");
+});
+builder.Services.AddHostedService<RabbitConsumerService>(sp =>
+{
+    var config = sp.GetRequiredService<IConfiguration>();
+    return new RabbitConsumerService(
+        sp,
+        host: config["RabbitMQ:Host"] ?? "localhost",
+        port: int.Parse(config["RabbitMQ:Port"] ?? "5672"),
+        username: config["RabbitMQ:Username"] ?? "guest",
+        password: config["RabbitMQ:Password"] ?? "guest",
+        queue: config["RabbitMQ:Queue"] ?? "ocr");
+});
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 var app = builder.Build();

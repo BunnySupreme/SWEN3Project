@@ -1,5 +1,6 @@
-namespace Paperless.Services;
 using Paperless.Api;
+
+namespace Paperless.Services;
 
 public interface IDocumentService
 {
