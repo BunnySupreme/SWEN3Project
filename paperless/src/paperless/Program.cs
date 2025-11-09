@@ -50,7 +50,7 @@ builder.Services.AddDbContext<DataContext>(options =>
 });
 
 // RabbitMQ Services
-string rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "localhost";
+string rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "paperless-rabbitmq";
 int rabbitPort = int.Parse(Environment.GetEnvironmentVariable("RABBITMQ_PORT") ?? "5672");
 string rabbitUsername = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "guest";
 string rabbitPassword = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "guest";
