@@ -1,5 +1,6 @@
 ﻿using AutoMapper;
 using FluentValidation;
+using log4net;
 using Paperless.Api;
 using Paperless.DAL;
 using Paperless.DAL.Models;
@@ -16,6 +17,7 @@ public sealed class DocumentService : IDocumentService
     private readonly IValidator<DocumentCreateDto> _createValidator;
     private readonly IValidator<DocumentUpdateDto> _updateValidator;
     private readonly IRabbitProducerService _rabbitProducer;
+    private readonly ILog _logger;
     #endregion
 
     #region Constructors
@@ -33,6 +35,7 @@ public sealed class DocumentService : IDocumentService
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _rabbitProducer = rabbitProducer;
+        _logger = LogManager.GetLogger(typeof(DocumentService));
     }
     #endregion
 
@@ -42,6 +45,8 @@ public sealed class DocumentService : IDocumentService
     public async Task<IReadOnlyList<DocumentReadDto>> ListAsync(
         string? title, int skip, int take, CancellationToken ct = default)
     {
+        _logger.Info($"Listing documents. Title filter: '{title ?? "null"}', Skip: {skip}, Take: {take}");
+
         var docs = string.IsNullOrWhiteSpace(title)
             ? await _repo.ReadAllAsync(ct)
             : await _repo.ReadByTitleAsync(title, ct);
@@ -61,6 +66,8 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<DocumentReadDto?> GetAsync(Guid id, CancellationToken ct = default)
     {
+        _logger.Info($"Fetching document with ID: {id}");
+
         var doc = await _repo.ReadByIdAsync(id, ct);
 
         // ADD: Fetch associated file from MinIO (if necessary for this operation)
@@ -73,9 +80,14 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<DocumentReadDto> CreateAsync(DocumentCreateDto dto, CancellationToken ct = default)
     {
+        _logger.Info($"Creating new document with Title: '{dto.Title}', Tags: '{dto.Tags}");
+
         var validation = await _createValidator.ValidateAsync(dto, ct);
         if (!validation.IsValid)
+        {
+            _logger.Warn("Document creation validation failed.");
             throw new ValidationException(validation.Errors);
+        }
 
         var entity = _mapper.Map<DocumentModel>(dto);
 
@@ -89,25 +101,25 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     // UPLOAD (MULTIPART)
     // ─────────────────────────────────────────────
-    public async Task<DocumentReadDto> UploadAsync(IFormFile file, CancellationToken ct)
+    public async Task<DocumentReadDto> UploadAsync(IFormFile file, DocumentCreateDto dto, CancellationToken ct)
     {
+        _logger.Info($"Uploading new document from file: '{file?.FileName}'");
+
         if (file is null || file.Length == 0)
+        {
+            _logger.Warn("File upload failed: No file provided or file is empty.");
             throw new ValidationException("File is required.");
+        }
 
         using var memoryStream = new MemoryStream();
         await file.CopyToAsync(memoryStream, ct);
 
-        // Build DTO from uploaded file
-        var dto = new DocumentCreateDto
-        (
-            Title: Path.GetFileName(file.FileName),
-            Summary: string.Empty,
-            Tags: Array.Empty<string>()
-        );
-
         var uploadValidation = await _createValidator.ValidateAsync(dto, ct);
         if (!uploadValidation.IsValid)
+        {
+            _logger.Warn("File upload validation failed.");
             throw new ValidationException(uploadValidation.Errors);
+        }
 
         // DB (Initial, no summary, summary will be handled via RabbitConsumerService)
         var created = await CreateAsync(dto, ct); // CreateAsync validates again (mocks return valid) and persists
@@ -129,12 +141,21 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
     {
+        _logger.Info($"Updating document with ID: {dto.Id}");
+
         var validation = await _updateValidator.ValidateAsync(dto, ct);
         if (!validation.IsValid)
+        {
+            _logger.Warn("Document update validation failed.");
             throw new ValidationException(validation.Errors);
+        }
 
         var entity = await _repo.ReadByIdAsync(dto.Id, ct);
-        if (entity is null) return false;
+        if (entity is null)
+        {
+            _logger.Warn($"Document with ID: {dto.Id} not found for update.");
+            return false;
+        }
 
         entity.Update(
             title: dto.Title,
@@ -151,8 +172,14 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
     {
+        _logger.Info($"Deleting document with ID: {id}");
+
         var entity = await _repo.ReadByIdAsync(id, ct);
-        if (entity is null) return false;
+        if (entity is null)
+        {
+            _logger.Warn($"Document with ID: {id} not found for deletion.");
+            return false;
+        }
 
         await _repo.DeleteByIdAsync(id, ct);
         await _db.SaveChangesAsync(ct);

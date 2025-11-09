@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using log4net;
 using Paperless.DAL;
 using Paperless.DAL.Models;
 using Paperless.DAL.Repositories;
@@ -19,6 +20,7 @@ namespace Paperless.Services
         private readonly string _username;
         private readonly string _password;
         private readonly string _queue;
+        private readonly ILog _logger;
         #endregion
 
         #region Constructors
@@ -30,12 +32,15 @@ namespace Paperless.Services
             _username = username;
             _password = password;
             _queue = queue;
+            _logger = LogManager.GetLogger(typeof(RabbitConsumerService));
         }
         #endregion
 
         #region Methods
         private async Task InitAsync()
         {
+            _logger.Info("Initializing RabbitConsumerService...");
+
             var factory = new ConnectionFactory()
             {
                 HostName = _host,
@@ -53,23 +58,31 @@ namespace Paperless.Services
                 exclusive: false,
                 autoDelete: false,
                 arguments: null);
+
+            _logger.Info("RabbitConsumerService initialized.");
         }
 
         protected override async Task ExecuteAsync(CancellationToken ct)
         {
+            _logger.Info("Starting RabbitConsumerService...");
+
             await InitAsync();
 
             if (_channel == null)
             {
+                _logger.Error("RabbitConsumerService is not initialized.");
                 throw new InvalidOperationException("RabbitConsumerService is not initialized.");
             }
 
             var consumer = new AsyncEventingBasicConsumer(_channel);
+            _logger.Info("Waiting for messages...");
 
             consumer.ReceivedAsync += async (sender, eventArgs) =>
             {
                 try
                 {
+                    _logger.Info("Message received from RabbitMQ.");
+
                     var body = eventArgs.Body.ToArray();
                     var json = Encoding.UTF8.GetString(body);
                     var result = JsonSerializer.Deserialize<ResultModel>(json);
@@ -82,6 +95,7 @@ namespace Paperless.Services
                 }
                 catch (Exception ex)
                 {
+                    _logger.Error("Error processing message.", ex);
                     await _channel.BasicNackAsync(eventArgs.DeliveryTag, false, true);
                 }
             };
@@ -98,6 +112,8 @@ namespace Paperless.Services
 
         private async Task ProcessSummaryAsync(ResultModel result)
         {
+            _logger.Info($"Processing summary for Document ID: {result.DocumentId}");
+
             // New scope and required services
             using var scope = _serviceProvider.CreateScope();
             var documentRepo = scope.ServiceProvider.GetRequiredService<IDocumentRepository>();
@@ -115,10 +131,16 @@ namespace Paperless.Services
                 await documentRepo.CreateOrUpdateAsync(document);
                 await db.SaveChangesAsync();
             }
+            else
+            {
+                _logger.Warn($"Document with ID: {result.DocumentId} not found.");
+            }
         }
 
         public override async Task StopAsync(CancellationToken ct)
         {
+            _logger.Info("Stopping RabbitConsumerService...");
+
             if (_channel != null)
             {
                 await _channel.CloseAsync();
@@ -131,6 +153,8 @@ namespace Paperless.Services
             }
 
             await base.StopAsync(ct);
+
+            _logger.Info("RabbitConsumerService stopped.");
         }
         #endregion
     }

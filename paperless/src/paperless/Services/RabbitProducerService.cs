@@ -1,5 +1,6 @@
 ﻿using System.Text;
 using System.Text.Json;
+using log4net;
 using Paperless.DAL.Models;
 using RabbitMQ.Client;
 
@@ -18,6 +19,7 @@ namespace Paperless.Services
         private readonly string _queue;
         private bool _initialized;
         private readonly SemaphoreSlim _initLock = new(1,1); // For thread-safe initialization, only one thread can initialize at a time, prevents race conditions
+        private readonly ILog _logger;
         #endregion
 
         #region Constructors
@@ -28,18 +30,25 @@ namespace Paperless.Services
             _username = username;
             _password = password;
             _queue = queue;
+            _logger = LogManager.GetLogger(typeof(RabbitProducerService));
         }
         #endregion
 
         #region Methods
         private async Task InitAsync()
         {
+            _logger.Info("Initializing RabbitProducerService...");
+
             if (_initialized) return; // Prevents unnecessary locking if already initialized
 
             await _initLock.WaitAsync();
             try
             {
-                if (_initialized) return; // Safety net
+                if (_initialized)
+                {
+                    _logger.Info("RabbitProducerService already initialized.");
+                    return; // Safety net
+                }
 
                 var factory = new ConnectionFactory()
                 {
@@ -66,6 +75,8 @@ namespace Paperless.Services
                 };
 
                 _initialized = true;
+
+                _logger.Info("RabbitProducerService initialized successfully.");
             }
             finally
             {
@@ -75,10 +86,13 @@ namespace Paperless.Services
 
         public async Task RunAsync(MessageModel message, CancellationToken ct = default)
         {
+            _logger.Info($"Producing message for DocumentId: {message.DocumentId}");
+
             await InitAsync();
 
             if (_channel == null || _properties == null)
             {
+                _logger.Error("RabbitProducerService is not properly initialized.");
                 throw new InvalidOperationException("RabbitProducerService is not initialized.");
             }
 
@@ -95,6 +109,8 @@ namespace Paperless.Services
 
         public async ValueTask DisposeAsync()
         {
+            _logger.Info("Disposing RabbitProducerService...");
+
             if (_channel != null)
             {
                 await _channel.CloseAsync();
@@ -107,6 +123,8 @@ namespace Paperless.Services
             }
 
             _initLock.Dispose();
+
+            _logger.Info("RabbitProducerService disposed.");
         }
         #endregion
     }
