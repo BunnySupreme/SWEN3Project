@@ -10,31 +10,85 @@ using Paperless.DAL.Repositories;
 using Paperless.Services;
 using System.Text.Json;
 
-// Configure log4net & create logger
+// ------------------------------------------------------------
+// CONFIGURE LOG4NET & CREATE LOGGER
+// ------------------------------------------------------------
+
 XmlConfigurator.Configure(new FileInfo("log4net.config"));
 var programLogger = LogManager.GetLogger(typeof(Program));
 
-// Build the app
+// ------------------------------------------------------------
+// BUILD THE APP
+// ------------------------------------------------------------
+
 programLogger.Info("=== Paperless Application Building ===");
+
+// Builder
 var builder = WebApplication.CreateBuilder(args);
+
+// AutoMapper
 builder.Services.AddAutoMapper(cfg =>
 {
     cfg.AddProfile<MappingProfile>();
 }, typeof(Program).Assembly);
+
+// Controller
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
+
+// Validatiors
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddFluentValidationAutoValidation();
+
+// OpenAPI / Swagger
 builder.Services.AddOpenApi();
+
+// DB Configuration
 builder.Services.AddDbContext<DataContext>(options =>
 {
     options.UseNpgsql(Configuration.PostgresConnectionString);
 });
+
+// RabbitMQ Services
+string rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "paperless-rabbitmq";
+int rabbitPort = int.Parse(Environment.GetEnvironmentVariable("RABBITMQ_PORT") ?? "5672");
+string rabbitUsername = Environment.GetEnvironmentVariable("RABBITMQ_USER") ?? "guest";
+string rabbitPassword = Environment.GetEnvironmentVariable("RABBITMQ_PASSWORD") ?? "guest";
+string rabbitInputQueue = Environment.GetEnvironmentVariable("RABBITMQ_INPUTQUEUE") ?? "paperless.ocr.input";
+string rabbitResultsQueue = Environment.GetEnvironmentVariable("RABBITMQ_RESULTSQUEUE") ?? "paperless.ocr.results";
+builder.Services.AddSingleton<IRabbitProducerService>(sp =>
+{
+    return new RabbitProducerService(
+        host: rabbitHost,
+        port: rabbitPort,
+        username: rabbitUsername,
+        password: rabbitPassword,
+        queue: rabbitInputQueue);
+});
+builder.Services.AddHostedService<RabbitConsumerService>(sp =>
+{
+    return new RabbitConsumerService(
+        sp,
+        host: rabbitHost,
+        port: rabbitPort,
+        username: rabbitUsername,
+        password: rabbitPassword,
+        queue: rabbitResultsQueue);
+});
+
+// Document Service
 builder.Services.AddScoped<IDocumentService, DocumentService>();
+
+// Document Repository
 builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+
+// Build
 var app = builder.Build();
 
-// Exception handling middleware (for unhandled exceptions)
+// ------------------------------------------------------------
+// EXCEPTION HANDLING MIDDLEWARE (FOR UNHANDLED EXCEPTIONS)
+// ------------------------------------------------------------
+
 programLogger.Info("=== Exception Handler Middleware Starting ===");
 app.UseExceptionHandler(errorApp =>
 {
@@ -55,7 +109,10 @@ app.UseExceptionHandler(errorApp =>
     });
 });
 
-// Apply database migrations automatically
+// ------------------------------------------------------------
+// APPLY DATABASE MIGRATIONS
+// ------------------------------------------------------------
+
 programLogger.Info("=== Database Migration Applying ===");
 using (var scope = app.Services.CreateScope())
 {
@@ -74,7 +131,10 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Configure the HTTP request pipeline.
+// ------------------------------------------------------------
+// CONFIGURE THE HTTP REQUEST PIPELINE
+// ------------------------------------------------------------
+
 programLogger.Info("=== HTTP Request Pipeline Configuring ===");
 app.MapOpenApi();
 app.UseSwaggerUI(c =>
@@ -82,10 +142,16 @@ app.UseSwaggerUI(c =>
     c.SwaggerEndpoint("/openapi/v1.json", "Paperless v1 API");
 });
 
-// Map controllers
+// ------------------------------------------------------------
+// MAP CONTROLLERS
+// ------------------------------------------------------------
+
 programLogger.Info("=== Controllers Mapping ===");
 app.MapControllers();
 
-// Run the app
+// ------------------------------------------------------------
+// RUN THE APP
+// ------------------------------------------------------------
+
 programLogger.Info("=== Paperless Application Running ===");
 app.Run();

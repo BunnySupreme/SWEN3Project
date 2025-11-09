@@ -19,6 +19,7 @@ namespace Paperless.UnitTests
         private readonly Mock<IMapper> _mapperMock;
         private readonly Mock<IValidator<DocumentCreateDto>> _createValidatorMock;
         private readonly Mock<IValidator<DocumentUpdateDto>> _updateValidatorMock;
+        private readonly Mock<IRabbitProducerService> _rabbitProducerMock;
         private readonly DocumentService _service;
 
         public DocumentServiceValidationTests()
@@ -58,7 +59,15 @@ namespace Paperless.UnitTests
             _createValidatorMock = new Mock<IValidator<DocumentCreateDto>>();
             _updateValidatorMock = new Mock<IValidator<DocumentUpdateDto>>();
 
-            _service = new DocumentService(_repoMock.Object, _dbMock.Object, _mapperMock.Object, _createValidatorMock.Object, _updateValidatorMock.Object);
+            _rabbitProducerMock = new Mock<IRabbitProducerService>();
+
+            _service = new DocumentService(
+                _repoMock.Object, 
+                _dbMock.Object, 
+                _mapperMock.Object, 
+                _createValidatorMock.Object, 
+                _updateValidatorMock.Object,
+                _rabbitProducerMock.Object);
         }
 
         [Fact]
@@ -217,6 +226,10 @@ namespace Paperless.UnitTests
                 Headers = new HeaderDictionary(),
                 ContentType = "text/plain"
             };
+            var dto = new DocumentCreateDto(
+                Title: "test.txt",
+                Summary: string.Empty,
+                Tags: Array.Empty<string>());
 
             // Ensure validator does not throw
             _createValidatorMock
@@ -235,7 +248,7 @@ namespace Paperless.UnitTests
                 });
 
             // Act
-            var result = await _service.UploadAsync(formFile, CancellationToken.None);
+            var result = await _service.UploadAsync(formFile, dto, CancellationToken.None);
 
             // Assert
             Assert.Equal("test.txt", result.Title);
@@ -253,6 +266,10 @@ namespace Paperless.UnitTests
                 Headers = new HeaderDictionary(),
                 ContentType = "text/plain"
             };
+            var dto = new DocumentCreateDto(
+                Title: "test.txt",
+                Summary: string.Empty,
+                Tags: Array.Empty<string>());
 
             // Simulate validator detecting invalid data (e.g. more than 10 tags for created DTO)
             var invalidResult = new ValidationResult(new[] { new ValidationFailure("Tags", "A maximum of 10 tags are allowed") });
@@ -264,7 +281,7 @@ namespace Paperless.UnitTests
                 .ReturnsAsync(invalidResult);
 
             // Act & Assert
-            await Assert.ThrowsAsync<ValidationException>(() => _service.UploadAsync(formFile, CancellationToken.None));
+            await Assert.ThrowsAsync<ValidationException>(() => _service.UploadAsync(formFile, dto, CancellationToken.None));
             _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 

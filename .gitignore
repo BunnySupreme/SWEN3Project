@@ -426,3 +426,5 @@ frontend/.idea/
 
 # Config files with sensitive info
 config/myrabbitmq.conf
+.env
+secrets/
