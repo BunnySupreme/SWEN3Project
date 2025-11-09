@@ -21,6 +21,26 @@ Build using the docker-compose file: docker compose up -d --build
 10. C# Project will now apply the migration when starting up
 
 ## RabbitMQ Setup
+RabbitMQ is configured via:
+
+- a local `.env` file (not tracked)
+- a local RabbitMQ config file `config/myrabbitmq.conf` (not tracked)
+
+### 1. Create `.env`
+
+In the repository root (next to `docker-compose.yml`), create a `.env` file.
+You can use `.env.example` as a starting point.
+
+Example:
+
+RABBITMQ_USER=paperless
+RABBITMQ_PASSWORD=paperless
+RABBITMQ_HOST=paperless-rabbitmq
+RABBITMQ_PORT=5672
+RABBITMQ_QUEUE=paperless.ocr
+
+### 2. Create config file
+
 1. Create config directory in repository root
 2. Create myrabbitmq.conf in config directory
 3. Add two lines to the conf file: (replace with credentials of your choice)

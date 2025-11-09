@@ -48,6 +48,13 @@ services:
       - POSTGRES_DATABASE=paperless
       - POSTGRES_USERNAME=paperless
       - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - RABBITMQ_INPUTQUEUE=${RABBITMQ_INPUTQUEUE}
+      - RABBITMQ_RESULTQUEUE=${RABBITMQ_RESULTSQUEUE}
+
     depends_on:
       - paperless-postgres
       - paperless-rabbitmq

@@ -146,7 +146,7 @@ public class DocumentsControllerTests
         var created = new DocumentReadDto(Guid.NewGuid(), "test.txt", string.Empty, Array.Empty<string>(), DateTimeOffset.Now);
 
         _serviceMock
-            .Setup(s => s.CreateAsync(It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
+            .Setup(s => s.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(created);
 
         // Act
@@ -158,7 +158,7 @@ public class DocumentsControllerTests
         createdAt.StatusCode.Should().Be(StatusCodes.Status201Created);
         createdAt.Value.Should().BeEquivalentTo(created);
 
-        _serviceMock.Verify(s => s.CreateAsync(It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()), Times.Once);
+        _serviceMock.Verify(s => s.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

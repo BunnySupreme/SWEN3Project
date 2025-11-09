@@ -78,14 +78,13 @@ public class DocumentsController : ControllerBase
             ? Array.Empty<string>()
             : tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-        // Sprint 3: store in MiniIO
-        var createDto = new DocumentCreateDto(
+        var dto = new DocumentCreateDto(
             Title: normalizedTitle,
             Summary: string.Empty,
             Tags: tagList
         );
 
-        var created = await _svc.CreateAsync(createDto, ct);
+        var created = await _svc.UploadAsync(file, dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
