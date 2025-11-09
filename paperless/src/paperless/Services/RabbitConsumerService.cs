@@ -66,7 +66,31 @@ namespace Paperless.Services
         {
             _logger.Info("Starting RabbitConsumerService...");
 
-            await InitAsync();
+            // Retry connection maxRetries times
+            int retryCount = 0;
+            int maxRetries = 10;
+
+            while(!ct.IsCancellationRequested && retryCount < maxRetries)
+            {
+                try
+                {
+                    _logger.Info($"Attempting to connect to RabbitMQ (Attempt {retryCount + 1}/{maxRetries})");
+                    await InitAsync();
+                    _logger.Info("Connected to RabbitMQ successfully.");
+                    break; // Exit loop on successful connection
+                }
+                catch (Exception ex)
+                {
+                    retryCount++;
+                    _logger.Warn($"Failed to connect to RabbitMQ (Attempt {retryCount}/{maxRetries}).", ex);
+                    if (retryCount >= maxRetries)
+                    {
+                        _logger.Error("Max retry attempts reached. Unable to connect to RabbitMQ.");
+                        throw;
+                    }
+                    await Task.Delay(TimeSpan.FromSeconds(5), ct); // Wait before retrying
+                }
+            }
 
             if (_channel == null)
             {
@@ -107,7 +131,14 @@ namespace Paperless.Services
                 consumer: consumer,
                 cancellationToken: ct);
 
-            await Task.Delay(Timeout.Infinite, ct);
+            try
+            {
+                await Task.Delay(Timeout.Infinite, ct);
+            }
+            catch (TaskCanceledException)
+            {
+                _logger.Info("Consumer stopping...");
+            }
         }
 
         private async Task ProcessSummaryAsync(ResultModel result)
