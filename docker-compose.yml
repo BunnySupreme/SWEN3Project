@@ -76,6 +76,22 @@ services:
     networks:
       - paperless-network
     restart: unless-stopped
+    
+  paperless-ocrworker:
+    build:
+      context: ./paperless/src/Paperless.OcrWorker
+      dockerfile: Dockerfile
+    container_name: paperless-ocrworker
+    depends_on:
+      - paperless-rabbitmq
+    environment:
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - RABBITMQ_INPUTQUEUE=${RABBITMQ_INPUTQUEUE}
+    networks:
+      - paperless-network
 
 secrets:
   postgres_password:

@@ -3,9 +3,14 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
+
+# Copy project file and restore
+COPY ["Paperless.OcrWorker.csproj", "./"]
+RUN dotnet restore "Paperless.OcrWorker.csproj"
+
+# Copy the rest and publish
 COPY . .
-RUN dotnet restore "Paperless.OcrWorker/Paperless.OcrWorker.csproj"
-RUN dotnet publish "Paperless.OcrWorker/Paperless.OcrWorker.csproj" -c Release -o /app/publish
+RUN dotnet publish "Paperless.OcrWorker.csproj" -c Release -o /app/publish /p:UseAppHost=false
 
 FROM base AS final
 WORKDIR /app

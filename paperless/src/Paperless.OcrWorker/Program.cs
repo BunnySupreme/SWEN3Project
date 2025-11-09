@@ -1,7 +1,11 @@
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paperless.OcrWorker;
 
-var builder = Host.CreateApplicationBuilder(args);
-builder.Services.AddHostedService<Worker>();
-
-var host = builder.Build();
-host.Run();
+Host.CreateDefaultBuilder(args)
+    .ConfigureServices((context, services) =>
+    {
+        services.AddHostedService<OcrWorkerService>();
+    })
+    .Build()
+    .Run();
