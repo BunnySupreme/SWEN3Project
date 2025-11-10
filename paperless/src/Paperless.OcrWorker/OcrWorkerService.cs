@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using log4net;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -14,7 +14,7 @@ namespace Paperless.OcrWorker
     {
         #region Fields
 
-        private readonly ILogger<OcrWorkerService> _logger;
+        private readonly ILog _logger;
 
         private IConnection? _connection;
         private IChannel? _channel;
@@ -34,9 +34,9 @@ namespace Paperless.OcrWorker
 
         #region Ctor
 
-        public OcrWorkerService(ILogger<OcrWorkerService> logger)
+        public OcrWorkerService()
         {
-            _logger = logger;
+            _logger = LogManager.GetLogger(typeof(OcrWorkerService));
 
             _host = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "paperless-rabbitmq";
 
@@ -65,7 +65,7 @@ namespace Paperless.OcrWorker
                 if (_initialized)
                     return;
 
-                _logger.LogInformation("Initializing OCR worker RabbitMQ connection...");
+                _logger.Info("Initializing OCR worker RabbitMQ connection...");
 
                 var factory = new ConnectionFactory
                 {
@@ -100,7 +100,7 @@ namespace Paperless.OcrWorker
 
                 _initialized = true;
 
-                _logger.LogInformation("OCR worker RabbitMQ initialization complete.");
+                _logger.Info("OCR worker RabbitMQ initialization complete.");
             }
             finally
             {
@@ -114,7 +114,7 @@ namespace Paperless.OcrWorker
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("Starting OCR worker...");
+            _logger.Info("Starting OCR worker...");
 
             const int maxRetries = 10;
             var retryCount = 0;
@@ -123,25 +123,21 @@ namespace Paperless.OcrWorker
             {
                 try
                 {
-                    _logger.LogInformation(
-                        "OCR worker attempting to connect to RabbitMQ (attempt {Attempt}/{MaxAttempts})",
-                        retryCount + 1, maxRetries);
+                    _logger.Info($"OCR worker attempting to connect to RabbitMQ (attempt {retryCount + 1}/{maxRetries})");
 
                     await InitAsync();
 
-                    _logger.LogInformation("OCR worker connected to RabbitMQ.");
+                    _logger.Info("OCR worker connected to RabbitMQ.");
                     break;
                 }
                 catch (Exception ex)
                 {
                     retryCount++;
-                    _logger.LogWarning(ex,
-                        "OCR worker failed to connect to RabbitMQ (attempt {Attempt}/{MaxAttempts}).",
-                        retryCount, maxRetries);
+                    _logger.Warn($"OCR worker failed to connect to RabbitMQ (attempt {retryCount + 1}/{maxRetries})");
 
                     if (retryCount >= maxRetries)
                     {
-                        _logger.LogError("OCR worker max retry attempts reached. Failing startup.");
+                        _logger.Error("OCR worker max retry attempts reached. Failing startup.");
                         throw;
                     }
 
@@ -151,15 +147,13 @@ namespace Paperless.OcrWorker
 
             if (_channel == null)
             {
-                _logger.LogError("OCR worker channel not initialized.");
+                _logger.Error("OCR worker channel not initialized.");
                 throw new InvalidOperationException("OCR worker is not initialized.");
             }
 
             var consumer = new AsyncEventingBasicConsumer(_channel);
 
-            _logger.LogInformation(
-                "OCR worker listening on input queue {InputQueue}, publishing to {ResultQueue}.",
-                _inputQueue, _resultQueue);
+            _logger.Info($"OCR worker listening on input queue {_inputQueue}, publishing to {_resultQueue}.");
 
             consumer.ReceivedAsync += async (_, ea) =>
             {
@@ -196,15 +190,14 @@ namespace Paperless.OcrWorker
                     }
                     catch (JsonException ex)
                     {
-                        _logger.LogWarning(ex,
-                            "OCR worker received non-JSON message: {Message}", message);
+                        _logger.Warn($"OCR worker received non-JSON message: {ex.Message}");
                     }
 
                     var summary = docId != Guid.Empty
                         ? $"[FAKE OCR] Document {docId} ('{title ?? "(no title)"}') processed. This is a simulated OCR result."
                         : $"[FAKE OCR] Received message: {message}";
 
-                    _logger.LogInformation("OCR result created for document {DocumentId}", docId);
+                    _logger.Info($"OCR result created for document {docId}");
 
                     var resultPayload = new
                     {
@@ -215,7 +208,7 @@ namespace Paperless.OcrWorker
 
                     if (_resultProperties == null)
                     {
-                        _logger.LogError("Result message properties not initialized.");
+                        _logger.Error("Result message properties not initialized.");
                         throw new InvalidOperationException("Result properties not initialized.");
                     }
 
@@ -230,15 +223,14 @@ namespace Paperless.OcrWorker
                         body: resultBody,
                         cancellationToken: stoppingToken);
 
-                    _logger.LogInformation(
-                        "OCR worker published fake OCR result for document {DocumentId} to {ResultQueue}.",
-                        resultPayload.DocumentId, _resultQueue);
+                    _logger.Info(
+                        $"OCR worker published fake OCR result for document {resultPayload.DocumentId} to {_resultQueue}.");
 
                     await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "OCR worker error while processing message.");
+                    _logger.Error("OCR worker error while processing message.");
 
                     if (_channel != null)
                     {
@@ -261,7 +253,7 @@ namespace Paperless.OcrWorker
             }
             catch (TaskCanceledException)
             {
-                _logger.LogInformation("OCR worker stopping due to cancellation.");
+                _logger.Info("OCR worker stopping due to cancellation.");
             }
         }
 
@@ -271,7 +263,7 @@ namespace Paperless.OcrWorker
 
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Stopping OCR worker...");
+            _logger.Info("Stopping OCR worker...");
 
             if (_channel != null)
             {
@@ -289,7 +281,7 @@ namespace Paperless.OcrWorker
 
             await base.StopAsync(cancellationToken);
 
-            _logger.LogInformation("OCR worker stopped.");
+            _logger.Info("OCR worker stopped.");
         }
 
         #endregion
