@@ -156,11 +156,12 @@ namespace Paperless.Services
             {
                 document.Update(
                     title: document.Title,
-                    summary: document.Summary,
+                    summary: result.Summary, // Only summary needs an update
                     tags: document.Tags);
 
                 await documentRepo.CreateOrUpdateAsync(document);
                 await db.SaveChangesAsync();
+                _logger.Info($"Document with ID: {result.DocumentId} updated successfully.");
             }
             else
             {
