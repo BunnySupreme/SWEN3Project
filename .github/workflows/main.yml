@@ -74,9 +74,27 @@ jobs:
     - name: Run integration tests
       run: |
         docker compose -f "docker-compose.yml" up -d
-        sleep 30
+        
         sudo apt-get update
         sudo apt-get install -y bash curl jq
+        
+        echo "Waiting for services to be ready..."
+        for i in {1..60}; do
+          if curl -sf http://localhost:5001/health > /dev/null 2>&1; then
+            echo "Backend is ready!"
+            break
+          fi
+          if [ $i -eq 60 ]; then
+            echo "Timeout waiting for backend"
+            docker compose logs
+            exit 1
+          fi
+          echo "Attempt $i/60: Backend not ready yet..."
+          sleep 2
+        done
+
+        sleep 10
+        
         sudo chmod +x tests/integration/integrationtests.sh
         ./tests/integration/integrationtests.sh
         docker compose -f "docker-compose.yml" down
