@@ -75,8 +75,10 @@ jobs:
       run: |
         docker compose -f "docker-compose.yml" up -d
         sleep 30
-        # dotnet ef database update --project ./paperless/paperless.csproj
-        # dotnet test --filter "Category=Integration"
+        apt-get update
+        apt-get install -y bash curl jq
+        chmod +x tests/integration/integrationtests.sh
+        ./tests/integration/integrationtests.sh
         docker compose -f "docker-compose.yml" down
 
     - name: Clean up secret files
