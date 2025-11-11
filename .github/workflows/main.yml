@@ -72,9 +72,7 @@ jobs:
       run: docker compose -f "docker-compose.yml" config
 
     - name: Run integration tests
-      run: |
-        docker compose -f "docker-compose.yml" up -d
-        
+      run: |       
         sudo apt-get update
         sudo apt-get install -y bash curl jq
         
