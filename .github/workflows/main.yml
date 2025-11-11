@@ -69,12 +69,34 @@ jobs:
       run: docker compose -f "docker-compose.yml" up -d --build
 
     - name: Run integration tests
+      env:
+        RABBITMQ_USER: paperless
+        RABBITMQ_PASSWORD: ${{ secrets.RABBIT_PASSWORD }}
+        RABBITMQ_HOST: paperless-rabbitmq
+        RABBITMQ_PORT: 5672
+        RABBITMQ_INPUTQUEUE: paperless.ocr.input
+        RABBITMQ_RESULTSQUEUE: paperless.ocr.results
       run: |       
         sudo apt-get update
-        sudo apt-get install -y bash curl jq        
+        sudo apt-get install -y bash curl jq
+
+        echo "Waiting for backend at http://localhost:5001..."
+        for i in {1..60}; do
+          if curl -sf http://localhost:5001 > /dev/null 2>&1; then
+            echo "Backend is responding!"
+            break
+          fi
+          if [ $i -eq 60 ]; then
+            echo "Timeout waiting for backend"
+            docker compose logs paperless-backend
+            exit 1
+          fi
+          echo "Attempt $i/60..."
+          sleep 2
+        done
+        
         sudo chmod +x tests/integration/integrationtests.sh
         ./tests/integration/integrationtests.sh
-        docker compose -f "docker-compose.yml" down
     
     - name: Stop Docker containers
       run: docker compose -f "docker-compose.yml" down
