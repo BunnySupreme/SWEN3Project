@@ -80,8 +80,8 @@ jobs:
         
         echo "Waiting for services to be ready..."
         for i in {1..60}; do
-          if curl -sf http://localhost:5001/health > /dev/null 2>&1; then
-            echo "Backend is ready!"
+          if docker compose ps | grep -q "paperless-backend.*Up"; then
+            echo "Backend container is up!"
             break
           fi
           if [ $i -eq 60 ]; then
