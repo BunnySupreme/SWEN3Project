@@ -137,13 +137,13 @@ public class DocumentsControllerTests
         // Arrange
         var content = Encoding.UTF8.GetBytes("dummy file content");
         var stream = new MemoryStream(content);
-        var formFile = new FormFile(stream, 0, stream.Length, "file", "test.txt")
+        var formFile = new FormFile(stream, 0, stream.Length, "file", "test.pdf") // Changed to .pdf
         {
             Headers = new HeaderDictionary(),
-            ContentType = "text/plain"
+            ContentType = "application/pdf" // Changed to application/pdf
         };
 
-        var created = new DocumentReadDto(Guid.NewGuid(), "test.txt", string.Empty, Array.Empty<string>(), DateTimeOffset.Now);
+        var created = new DocumentReadDto(Guid.NewGuid(), "test.pdf", string.Empty, Array.Empty<string>(), DateTimeOffset.Now);
 
         _serviceMock
             .Setup(s => s.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
