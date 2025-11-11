@@ -70,6 +70,22 @@ public class DocumentsController : ControllerBase
         if (file == null || file.Length == 0)
             return BadRequest(new { message = "No file uploaded" });
 
+        var allowedContentTypes = new[] { "application/pdf" };
+        if (!allowedContentTypes.Contains(file.ContentType, StringComparer.OrdinalIgnoreCase))
+        {
+            // 415 = Unsupported Media Type
+            return StatusCode(StatusCodes.Status415UnsupportedMediaType,
+                $"Only PDF files are allowed. Received: {file.ContentType}");
+        }
+
+        // also test ending additonally
+        var extension = Path.GetExtension(file.FileName);
+        if (!string.Equals(extension, ".pdf", StringComparison.OrdinalIgnoreCase))
+        {
+            return StatusCode(StatusCodes.Status415UnsupportedMediaType,
+                $"Only .pdf files are allowed. Received: {extension}");
+        }
+
         var normalizedTitle = string.IsNullOrWhiteSpace(title)
             ? Path.GetFileName(file.FileName)
             : title.Trim();
