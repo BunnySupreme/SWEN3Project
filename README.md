@@ -46,3 +46,9 @@ RABBITMQ_QUEUE=paperless.ocr
 3. Add two lines to the conf file: (replace with credentials of your choice)
     - default_user = 'myusername'
     - default_pass = 'mypassword'
+
+
+## Integration tests
+
+curl script is under tests/integration
+to run, edit the script in VS code and change to LF (bottom right)
