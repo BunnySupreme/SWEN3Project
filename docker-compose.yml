@@ -30,6 +30,20 @@ services:
       - paperless-network
     restart: unless-stopped
 
+  paperless-minio:
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    container_name: paperless-minio
+    environment:
+      - MINIO_ROOT_USER=paperless
+      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
+    ports:
+      - "9000:9001" # Management console is on port 9000
+    command: server /data --console-address ":9001" # Data is on port 9001
+    volumes:
+      - minio_data:/data
+    secrets:
+      - minio_password
+
   paperless-backend:
     build:
       context: ./paperless/src/paperless
@@ -54,10 +68,10 @@ services:
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - RABBITMQ_INPUTQUEUE=${RABBITMQ_INPUTQUEUE}
       - RABBITMQ_RESULTSQUEUE=${RABBITMQ_RESULTSQUEUE}
-
     depends_on:
       - paperless-postgres
       - paperless-rabbitmq
+      - paperless-minio
     secrets:
       - postgres_password
     networks:
@@ -84,6 +98,7 @@ services:
     container_name: paperless-ocrworker
     depends_on:
       - paperless-rabbitmq
+      - paperless-minio
     environment:
       - RABBITMQ_HOST=${RABBITMQ_HOST}
       - RABBITMQ_PORT=${RABBITMQ_PORT}
@@ -107,3 +122,4 @@ networks:
 
 volumes:
   postgres_data:
+  minio_data:
