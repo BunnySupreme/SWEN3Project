@@ -37,12 +37,16 @@ services:
       - MINIO_ROOT_USER=paperless
       - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
     ports:
-      - "9000:9001" # Management console is on port 9000
-    command: server /data --console-address ":9001" # Data is on port 9001
+      - "9000:9000" # Management console
+      - "9001:9001" # Data
+    command: server /data --console-address ":9001"
     volumes:
       - minio_data:/data
     secrets:
       - minio_password
+    networks:
+      - paperless-network
+    restart: unless-stopped
 
   paperless-backend:
     build:
