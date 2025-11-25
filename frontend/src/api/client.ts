@@ -18,6 +18,13 @@ export async function getDocument(id: string) {
   return data;
 }
 
+export async function downloadDocument(id: string) {
+  const { data } = await api.get<Blob>(`/documents/${id}/download`, {
+    responseType: 'blob',
+  });
+  return data;
+}
+
 export async function uploadDocument(file: File, title: string, tagsCsv: string) {
   const form = new FormData();
   form.append('file', file, file.name);

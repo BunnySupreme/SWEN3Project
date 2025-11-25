@@ -47,7 +47,7 @@ public class DocumentsController : ControllerBase
     // ─────────────────────────────────────────────
     // DOWNLOAD
     // ─────────────────────────────────────────────
-    [HttpGet("download/{id:guid}")]
+    [HttpGet("{id:guid}/download")]
     [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct = default)
