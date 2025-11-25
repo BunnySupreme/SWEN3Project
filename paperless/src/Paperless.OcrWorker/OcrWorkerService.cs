@@ -195,33 +195,27 @@ namespace Paperless.OcrWorker
                     }
 
                     var summary = String.Empty;
-                    try
-                    {
-                        var fileName = docId.ToString();
-                        var memoryStream = new MemoryStream();
 
-                        await _minioClient.GetObjectAsync(new GetObjectArgs()
-                            .WithBucket("documents")
-                            .WithObject(fileName)
-                            .WithCallbackStream(stream => 
-                            {
-                                stream.CopyTo(memoryStream);
-                            }),
-                            ct);
+                    var fileName = docId.ToString();
+                    var memoryStream = new MemoryStream();
 
-                        // OCR PROCESSING HERE: Transform memoryStream as needed, send to OCR engine, etc.
+                    await _minioClient.GetObjectAsync(new GetObjectArgs()
+                        .WithBucket("documents")
+                        .WithObject(fileName)
+                        .WithCallbackStream(stream => 
+                        {
+                            stream.CopyTo(memoryStream);
+                        }),
+                        ct);
 
-                        // Remove block below once OCR is implemented
-                        summary = docId != Guid.Empty
-                            ? $"[FAKE OCR] Document {docId} ('{title ?? "(no title)"}') processed. This is a simulated OCR result."
-                            : $"[FAKE OCR] Received message: {message}";
+                    // OCR PROCESSING HERE: Transform memoryStream as needed, send to OCR engine, etc.
 
-                        _logger.Info($"OCR result created for document {docId}");
-                    }
-                    catch
-                    {
-                        _logger.Error($"OCR processing failed: {message}");
-                    }
+                    // Remove block below once OCR is implemented
+                    summary = docId != Guid.Empty
+                        ? $"[FAKE OCR] Document {docId} ('{title ?? "(no title)"}') processed. This is a simulated OCR result."
+                        : $"[FAKE OCR] Received message: {message}";
+
+                    _logger.Info($"OCR result created for document {docId}");
 
                     var resultPayload = new
                     {
