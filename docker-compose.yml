@@ -109,8 +109,12 @@ services:
       - RABBITMQ_USER=${RABBITMQ_USER}
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - RABBITMQ_INPUTQUEUE=${RABBITMQ_INPUTQUEUE}
+      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
+    secrets:
+      - minio_password
     networks:
       - paperless-network
+    restart: unless-stopped
 
 secrets:
   postgres_password:
