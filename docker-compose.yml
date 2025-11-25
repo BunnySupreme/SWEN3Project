@@ -72,12 +72,14 @@ services:
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - RABBITMQ_INPUTQUEUE=${RABBITMQ_INPUTQUEUE}
       - RABBITMQ_RESULTSQUEUE=${RABBITMQ_RESULTSQUEUE}
+      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
     depends_on:
       - paperless-postgres
       - paperless-rabbitmq
       - paperless-minio
     secrets:
       - postgres_password
+      - minio_password
     networks:
       - paperless-network
     restart: unless-stopped
