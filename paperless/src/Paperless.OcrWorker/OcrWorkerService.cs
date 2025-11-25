@@ -1,10 +1,8 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
-using Microsoft.Extensions.Hosting;
 using log4net;
+using Minio;
+using Minio.DataModel.Args;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -27,13 +25,14 @@ namespace Paperless.OcrWorker
         private readonly string _inputQueue;
         private readonly string _resultQueue;
 
+        private readonly IMinioClient _minioClient;
+
         private bool _initialized;
         private readonly SemaphoreSlim _initLock = new(1, 1);
 
         #endregion
 
         #region Ctor
-
         public OcrWorkerService()
         {
             _logger = LogManager.GetLogger(typeof(OcrWorkerService));
@@ -48,12 +47,16 @@ namespace Paperless.OcrWorker
 
             _inputQueue = Environment.GetEnvironmentVariable("RABBITMQ_INPUTQUEUE") ?? "paperless.ocr.input";
             _resultQueue = Environment.GetEnvironmentVariable("RABBITMQ_RESULTSQUEUE") ?? "paperless.ocr.results";
-        }
 
+            _minioClient = new MinioClient()
+                .WithEndpoint("paperless-minio", 9000)
+                .WithCredentials("paperless", Configuration.MinioPassword)
+                .WithSSL(false)
+                .Build();
+        }
         #endregion
 
         #region Init / Connection
-
         private async Task InitAsync()
         {
             if (_initialized)
@@ -107,19 +110,17 @@ namespace Paperless.OcrWorker
                 _initLock.Release();
             }
         }
-
         #endregion
 
         #region Execute
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        protected override async Task ExecuteAsync(CancellationToken ct)
         {
             _logger.Info("Starting OCR worker...");
 
             const int maxRetries = 10;
             var retryCount = 0;
 
-            while (!stoppingToken.IsCancellationRequested && retryCount < maxRetries)
+            while (!ct.IsCancellationRequested && retryCount < maxRetries)
             {
                 try
                 {
@@ -141,7 +142,7 @@ namespace Paperless.OcrWorker
                         throw;
                     }
 
-                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
+                    await Task.Delay(TimeSpan.FromSeconds(5), ct);
                 }
             }
 
@@ -193,7 +194,24 @@ namespace Paperless.OcrWorker
                         _logger.Warn($"OCR worker received non-JSON message: {ex.Message}");
                     }
 
-                    var summary = docId != Guid.Empty
+                    var summary = String.Empty;
+
+                    var fileName = docId.ToString();
+                    var memoryStream = new MemoryStream();
+
+                    await _minioClient.GetObjectAsync(new GetObjectArgs()
+                        .WithBucket("documents")
+                        .WithObject(fileName)
+                        .WithCallbackStream(stream => 
+                        {
+                            stream.CopyTo(memoryStream);
+                        }),
+                        ct);
+
+                    // OCR PROCESSING HERE: Transform memoryStream as needed, send to OCR engine, etc.
+
+                    // Remove block below once OCR is implemented
+                    summary = docId != Guid.Empty
                         ? $"[FAKE OCR] Document {docId} ('{title ?? "(no title)"}') processed. This is a simulated OCR result."
                         : $"[FAKE OCR] Received message: {message}";
 
@@ -221,7 +239,7 @@ namespace Paperless.OcrWorker
                         mandatory: false,
                         basicProperties: _resultProperties,
                         body: resultBody,
-                        cancellationToken: stoppingToken);
+                        cancellationToken: ct);
 
                     _logger.Info(
                         $"OCR worker published fake OCR result for document {resultPayload.DocumentId} to {_resultQueue}.");
@@ -245,22 +263,20 @@ namespace Paperless.OcrWorker
                 queue: _inputQueue,
                 autoAck: false,
                 consumer: consumer,
-                cancellationToken: stoppingToken);
+                cancellationToken: ct);
 
             try
             {
-                await Task.Delay(Timeout.Infinite, stoppingToken);
+                await Task.Delay(Timeout.Infinite, ct);
             }
             catch (TaskCanceledException)
             {
                 _logger.Info("OCR worker stopping due to cancellation.");
             }
         }
-
         #endregion
 
         #region Stop / Dispose
-
         public override async Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.Info("Stopping OCR worker...");
@@ -283,7 +299,6 @@ namespace Paperless.OcrWorker
 
             _logger.Info("OCR worker stopped.");
         }
-
         #endregion
     }
 }
