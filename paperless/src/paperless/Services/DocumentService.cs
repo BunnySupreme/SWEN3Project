@@ -1,6 +1,9 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using log4net;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Minio;
+using Minio.DataModel.Args;
 using Paperless.Api;
 using Paperless.DAL;
 using Paperless.DAL.Models;
@@ -12,6 +15,8 @@ public sealed class DocumentService : IDocumentService
 {
     #region Fields
     private readonly IDocumentRepository _repo;
+    private readonly IMinioClient _minioClient;
+    private const string BucketName = "documents";
     private readonly DataContext _db;
     private readonly IMapper _mapper;
     private readonly IValidator<DocumentCreateDto> _createValidator;
@@ -30,6 +35,11 @@ public sealed class DocumentService : IDocumentService
         IRabbitProducerService rabbitProducer)
     {
         _repo = repo;
+        _minioClient = new MinioClient()
+            .WithEndpoint("paperless-minio", 9000)
+            .WithCredentials("paperless", Configuration.MinioPassword)
+            .WithSSL(false)
+            .Build();
         _db = db;
         _mapper = mapper;
         _createValidator = createValidator;
@@ -45,7 +55,7 @@ public sealed class DocumentService : IDocumentService
     public async Task<IReadOnlyList<DocumentReadDto>> ListAsync(
         string? title, int skip, int take, CancellationToken ct = default)
     {
-        _logger.Info($"Listing documents. Title filter: '{title ?? "null"}', Skip: {skip}, Take: {take}");
+        _logger.Info($"Listing document info from DB. Title filter: '{title ?? "null"}', Skip: {skip}, Take: {take}");
 
         var docs = string.IsNullOrWhiteSpace(title)
             ? await _repo.ReadAllAsync(ct)
@@ -66,17 +76,38 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<DocumentReadDto?> GetAsync(Guid id, CancellationToken ct = default)
     {
-        _logger.Info($"Fetching document with ID: {id}");
+        _logger.Info($"Fetching document info from DB with ID: {id}");
 
         var doc = await _repo.ReadByIdAsync(id, ct);
-
-        // ADD: Fetch associated file from MinIO (if necessary for this operation)
 
         return doc is null ? null : _mapper.Map<DocumentReadDto>(doc);
     }
 
     // ─────────────────────────────────────────────
-    // CREATE (JSON)
+    // DOWNLOAD
+    // ─────────────────────────────────────────────
+    public async Task<MemoryStream> DownloadAsync(Guid id, CancellationToken ct = default)
+    {
+        _logger.Info($"Downloading document from MinIO with ID: {id}");
+
+        var fileName = id.ToString();
+        var memoryStream = new MemoryStream();
+
+        await _minioClient.GetObjectAsync(new GetObjectArgs()
+            .WithBucket(BucketName)
+            .WithObject(fileName)
+            .WithCallbackStream(stream =>
+            {
+                stream.CopyTo(memoryStream);
+            }));
+
+        memoryStream.Position = 0;
+
+        return memoryStream;
+    }
+
+    // ─────────────────────────────────────────────
+    // CREATE
     // ─────────────────────────────────────────────
     public async Task<DocumentReadDto> CreateAsync(DocumentCreateDto dto, CancellationToken ct = default)
     {
@@ -99,12 +130,14 @@ public sealed class DocumentService : IDocumentService
 
 
     // ─────────────────────────────────────────────
-    // UPLOAD (MULTIPART)
+    // UPLOAD
     // ─────────────────────────────────────────────
     public async Task<DocumentReadDto> UploadAsync(IFormFile file, DocumentCreateDto dto, CancellationToken ct)
     {
+        // Logger
         _logger.Info($"Uploading new document from file: '{file?.FileName}'");
 
+        // Validation
         if (file is null || file.Length == 0)
         {
             _logger.Warn("File upload failed: No file provided or file is empty.");
@@ -124,6 +157,25 @@ public sealed class DocumentService : IDocumentService
         // DB (Initial, no summary, summary will be handled via RabbitConsumerService)
         var created = await CreateAsync(dto, ct); // CreateAsync validates again (mocks return valid) and persists
 
+        // Minio (Store file)
+        try
+        {
+            await EnsureBucketExists();
+
+            var fileName = created.Id.ToString();
+            await using var fileStream = file.OpenReadStream();
+
+            await _minioClient.PutObjectAsync(new PutObjectArgs()
+                .WithBucket(BucketName)
+                .WithObject(fileName)
+                .WithStreamData(fileStream)
+                .WithObjectSize(file.Length));
+        }
+        catch (Exception ex)
+        {
+            _logger.Error("Storing file in Minio failed. ", ex);
+        }
+
         // OCR Queue (Produce message for OCR)
         MessageModel message = new MessageModel
         {
@@ -133,6 +185,7 @@ public sealed class DocumentService : IDocumentService
         };
         await _rabbitProducer.RunAsync(message, ct);
 
+        // Done
         return created;
     }
 
@@ -193,4 +246,14 @@ public sealed class DocumentService : IDocumentService
         tags is null || tags.Count == 0
             ? string.Empty
             : string.Join(',', tags);
+
+    private async Task EnsureBucketExists()
+    {
+        bool found = await _minioClient.BucketExistsAsync(new BucketExistsArgs().WithBucket(BucketName));
+        if(!found)
+        {
+            _logger.Info($"Bucket '{BucketName}' not found. Creating new bucket.");
+            await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(BucketName));
+        }
+    }
 }

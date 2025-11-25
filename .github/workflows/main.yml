@@ -41,6 +41,15 @@ jobs:
         docker compose version
         docker ps
 
+    - name: Create password files and config
+      run: |
+        mkdir -p secrets
+        mkdir -p config
+        echo "${{ secrets.POSTGRES_PASSWORD }}" > secrets/postgres_password.txt
+        echo "${{ secrets.MINIO_PASSWORD }}" > secrets/minio_password.txt
+        echo "default_user = 'paperless'
+        default_pass = '${{ secrets.RABBIT_PASSWORD }}'" > config/myrabbitmq.conf
+        
     - name: Restore dependencies
       run: dotnet restore paperless/paperless.sln
 
@@ -55,15 +64,6 @@ jobs:
         --configuration Release
         --no-build
         --verbosity normal
-
-    - name: Create password files and config
-      run: |
-        mkdir -p secrets
-        mkdir -p config
-        echo "${{ secrets.POSTGRES_PASSWORD }}" > secrets/postgres_password.txt
-        echo "${{ secrets.MINIO_PASSWORD }}" > secrets/minio_password.txt
-        echo "default_user = 'paperless'
-        default_pass = '${{ secrets.RABBIT_PASSWORD }}'" > config/myrabbitmq.conf
 
     - name: Build Docker images and start containers
       env:

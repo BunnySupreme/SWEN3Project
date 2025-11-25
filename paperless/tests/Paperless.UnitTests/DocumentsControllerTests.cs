@@ -38,8 +38,8 @@ public class DocumentsControllerTests
         var actionResult = await _controller.List(title: null, skip: 0, take: 50);
 
         // Assert
-        actionResult.Result.Should().BeOfType<OkObjectResult>();
-        var ok = (OkObjectResult)actionResult.Result!;
+        actionResult.Should().BeOfType<OkObjectResult>();
+        var ok = (OkObjectResult)actionResult!;
         ok.StatusCode.Should().Be(StatusCodes.Status200OK);
         ok.Value.Should().BeAssignableTo<IEnumerable<DocumentReadDto>>();
         ((IEnumerable<DocumentReadDto>)ok.Value!).ToList().Should().BeEquivalentTo(docs, options => options.WithStrictOrdering());
@@ -55,16 +55,16 @@ public class DocumentsControllerTests
         var result1 = await _controller.List(title: null, skip: -1, take: 50);
 
         // Assert
-        result1.Result.Should().BeOfType<BadRequestObjectResult>();
-        ((BadRequestObjectResult)result1.Result!).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        result1.Should().BeOfType<BadRequestObjectResult>();
+        ((BadRequestObjectResult)result1!).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
 
         // Arrange - invalid take (0)
         var result2 = await _controller.List(title: null, skip: 0, take: 0);
-        result2.Result.Should().BeOfType<BadRequestObjectResult>();
+        result2.Should().BeOfType<BadRequestObjectResult>();
 
         // Arrange - invalid take (exceeds max)
         var result3 = await _controller.List(title: null, skip: 0, take: 1000);
-        result3.Result.Should().BeOfType<BadRequestObjectResult>();
+        result3.Should().BeOfType<BadRequestObjectResult>();
 
         // Service should never be called when parameters are invalid
         _serviceMock.Verify(s => s.ListAsync(It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -82,8 +82,8 @@ public class DocumentsControllerTests
         var result = await _controller.Get(id);
 
         // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
-        var ok = (OkObjectResult)result.Result!;
+        result.Should().BeOfType<OkObjectResult>();
+        var ok = (OkObjectResult)result!;
         ok.StatusCode.Should().Be(StatusCodes.Status200OK);
         ok.Value.Should().BeEquivalentTo(dto);
     }
@@ -99,8 +99,52 @@ public class DocumentsControllerTests
         var result = await _controller.Get(id);
 
         // Assert
-        result.Result.Should().BeOfType<NotFoundResult>();
-        ((NotFoundResult)result.Result!).StatusCode.Should().Be(StatusCodes.Status404NotFound);
+        result.Should().BeOfType<NotFoundResult>();
+        ((NotFoundResult)result!).StatusCode.Should().Be(StatusCodes.Status404NotFound);
+    }
+
+    [Fact]
+    public async Task Download_ShouldReturn200_WhenFileExists()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        var fileContent = Encoding.UTF8.GetBytes("PDF file content");
+        var memoryStream = new MemoryStream(fileContent);
+
+        _serviceMock
+            .Setup(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()))!
+            .ReturnsAsync((MemoryStream?)memoryStream);
+
+        // Act
+        var result = await _controller.Download(id);
+
+        // Assert
+        result.Should().BeOfType<FileStreamResult>();
+        var fileResult = (FileStreamResult)result!;
+        fileResult.ContentType.Should().Be("application/pdf");
+        fileResult.FileDownloadName.Should().Be($"{id}.pdf");
+
+
+        _serviceMock.Verify(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Download_ShouldReturn404_WhenFileNotFound()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        _serviceMock
+            .Setup(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()))!
+            .ReturnsAsync((MemoryStream?)null);
+
+        // Act
+        var result = await _controller.Download(id);
+
+        // Assert
+        result.Should().BeOfType<NotFoundResult>();
+        ((NotFoundResult)result!).StatusCode.Should().Be(StatusCodes.Status404NotFound);
+
+        _serviceMock.Verify(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -118,8 +162,8 @@ public class DocumentsControllerTests
         var result = await _controller.Create(createDto);
 
         // Assert
-        result.Result.Should().BeOfType<CreatedAtActionResult>();
-        var createdAt = (CreatedAtActionResult)result.Result!;
+        result.Should().BeOfType<CreatedAtActionResult>();
+        var createdAt = (CreatedAtActionResult)result!;
         createdAt.StatusCode.Should().Be(StatusCodes.Status201Created);
         createdAt.ActionName.Should().Be(nameof(DocumentsController.Get));
         createdAt.Value.Should().BeEquivalentTo(created);
@@ -153,8 +197,8 @@ public class DocumentsControllerTests
         var result = await _controller.Upload(formFile, title: null, tags: null);
 
         // Assert
-        result.Result.Should().BeOfType<CreatedAtActionResult>();
-        var createdAt = (CreatedAtActionResult)result.Result!;
+        result.Should().BeOfType<CreatedAtActionResult>();
+        var createdAt = (CreatedAtActionResult)result!;
         createdAt.StatusCode.Should().Be(StatusCodes.Status201Created);
         createdAt.Value.Should().BeEquivalentTo(created);
 
