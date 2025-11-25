@@ -14,7 +14,7 @@
         "POSTGRES_DB": "paperless",
         "POSTGRES_USER": "paperless",
         "POSTGRES_PASSWORD_FILE": "../../../../secrets/postgres_password.txt",
-        "MINIO_PASSWORD_FILE": "../../../../secrets/minio_password.txt"
+        "MINIO_ROOT_PASSWORD_FILE": "../../../../secrets/minio_password.txt"
       }
     },
     "https": {
@@ -30,7 +30,7 @@
         "POSTGRES_DB": "paperless",
         "POSTGRES_USER": "paperless",
         "POSTGRES_PASSWORD_FILE": "../../../../secrets/postgres_password.txt",
-        "MINIO_PASSWORD_FILE": "../../../../secrets/minio_password.txt"
+        "MINIO_ROOT_PASSWORD_FILE": "../../../../secrets/minio_password.txt"
       }
     }
   }
