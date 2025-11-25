@@ -19,7 +19,7 @@ public class DocumentsController : ControllerBase
     [HttpGet]
     [ProducesResponseType(typeof(IEnumerable<DocumentReadDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<IEnumerable<DocumentReadDto>>> List(
+    public async Task<IActionResult> List(
         [FromQuery] string? title,
         [FromQuery] int skip = 0,
         [FromQuery] int take = DefaultTake,
@@ -38,19 +38,36 @@ public class DocumentsController : ControllerBase
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(DocumentReadDto), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<DocumentReadDto>> Get(Guid id, CancellationToken ct = default)
+    public async Task<IActionResult> Get(Guid id, CancellationToken ct = default)
     {
         var doc = await _svc.GetAsync(id, ct);
         return doc is null ? NotFound() : Ok(doc);
     }
 
     // ─────────────────────────────────────────────
-    // CREATE (JSON)
+    // DOWNLOAD
+    // ─────────────────────────────────────────────
+    [HttpGet("download/{id:guid}")]
+    [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> Download(Guid id, CancellationToken ct = default)
+    {
+        var memoryStream = await _svc.DownloadAsync(id, ct);
+        if (memoryStream is null)
+            return NotFound();
+
+        var fileName = $"{id}.pdf";
+
+        return File(memoryStream, "application/pdf", fileName);
+    }
+
+    // ─────────────────────────────────────────────
+    // CREATE
     // ─────────────────────────────────────────────
     [HttpPost]
     [ProducesResponseType(typeof(DocumentReadDto), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<ActionResult<DocumentReadDto>> Create(
+    public async Task<IActionResult> Create(
         [FromBody] DocumentCreateDto dto,
         CancellationToken ct = default)
     {
@@ -58,10 +75,13 @@ public class DocumentsController : ControllerBase
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
+    // ─────────────────────────────────────────────
+    // UPLOAD
+    // ─────────────────────────────────────────────
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(typeof(DocumentReadDto), StatusCodes.Status201Created)]
-    public async Task<ActionResult<DocumentReadDto>> Upload(
+    public async Task<IActionResult> Upload(
         [FromForm] IFormFile file,
         [FromForm] string? title,
         [FromForm] string? tags,
@@ -103,8 +123,6 @@ public class DocumentsController : ControllerBase
         var created = await _svc.UploadAsync(file, dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
-
-
 
     // ─────────────────────────────────────────────
     // UPDATE
