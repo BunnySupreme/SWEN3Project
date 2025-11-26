@@ -25,7 +25,9 @@ namespace Paperless.OcrWorker
         private readonly string _inputQueue;
         private readonly string _resultQueue;
 
+        private readonly OcrJobHandler _jobHandler;
         private readonly IMinioClient _minioClient;
+        private readonly IOcrEngine _ocr;
 
         private bool _initialized;
         private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -33,7 +35,7 @@ namespace Paperless.OcrWorker
         #endregion
 
         #region Ctor
-        public OcrWorkerService()
+        public OcrWorkerService(IOcrEngine ocr)
         {
             _logger = LogManager.GetLogger(typeof(OcrWorkerService));
 
@@ -48,11 +50,17 @@ namespace Paperless.OcrWorker
             _inputQueue = Environment.GetEnvironmentVariable("RABBITMQ_INPUTQUEUE") ?? "paperless.ocr.input";
             _resultQueue = Environment.GetEnvironmentVariable("RABBITMQ_RESULTSQUEUE") ?? "paperless.ocr.results";
 
-            _minioClient = new MinioClient()
+            var minioClient = new MinioClient()
                 .WithEndpoint("paperless-minio", 9000)
                 .WithCredentials("paperless", Configuration.MinioPassword)
                 .WithSSL(false)
                 .Build();
+
+            var store = new MinioObjectStore(minioClient);
+
+            _ocr = ocr;
+            _minioClient = minioClient;
+            _jobHandler = new OcrJobHandler(store, _ocr, _logger);
         }
         #endregion
 
@@ -163,63 +171,13 @@ namespace Paperless.OcrWorker
                     var body = ea.Body.ToArray();
                     var message = Encoding.UTF8.GetString(body);
 
-                    Guid docId = Guid.Empty;
-                    string? title = null;
+                    var (docId, title) = OcrMessageParser.Parse(message, _logger);
 
-                    try
-                    {
-                        using var doc = JsonDocument.Parse(message);
-                        var root = doc.RootElement;
-
-                        if (root.TryGetProperty("DocumentId", out var idProp))
-                        {
-                            if (idProp.ValueKind == JsonValueKind.String &&
-                                Guid.TryParse(idProp.GetString(), out var parsed))
-                            {
-                                docId = parsed;
-                            }
-                            else if (idProp.ValueKind == JsonValueKind.Undefined ||
-                                     idProp.ValueKind == JsonValueKind.Null)
-                            {
-                            }
-                        }
-
-                        if (root.TryGetProperty("DocumentTitle", out var titleProp))
-                        {
-                            title = titleProp.GetString();
-                        }
-                    }
-                    catch (JsonException ex)
-                    {
-                        _logger.Warn($"OCR worker received non-JSON message: {ex.Message}");
-                    }
-
-                    var summary = String.Empty;
-
-                    var fileName = docId.ToString();
-                    var memoryStream = new MemoryStream();
-
-                    await _minioClient.GetObjectAsync(new GetObjectArgs()
-                        .WithBucket("documents")
-                        .WithObject(fileName)
-                        .WithCallbackStream(stream => 
-                        {
-                            stream.CopyTo(memoryStream);
-                        }),
-                        ct);
-
-                    // OCR PROCESSING HERE: Transform memoryStream as needed, send to OCR engine, etc.
-
-                    // Remove block below once OCR is implemented
-                    summary = docId != Guid.Empty
-                        ? $"[FAKE OCR] Document {docId} ('{title ?? "(no title)"}') processed. This is a simulated OCR result."
-                        : $"[FAKE OCR] Received message: {message}";
-
-                    _logger.Info($"OCR result created for document {docId}");
+                    var (resultDocId, summary) = await _jobHandler.HandleAsync(docId, title, ct);
 
                     var resultPayload = new
                     {
-                        DocumentId = docId == Guid.Empty ? Guid.NewGuid() : docId,
+                        DocumentId = resultDocId == Guid.Empty ? Guid.NewGuid() : resultDocId,
                         Summary = summary,
                         ProcessedAt = DateTimeOffset.UtcNow
                     };
@@ -242,20 +200,18 @@ namespace Paperless.OcrWorker
                         cancellationToken: ct);
 
                     _logger.Info(
-                        $"OCR worker published fake OCR result for document {resultPayload.DocumentId} to {_resultQueue}.");
+                        $"OCR worker published OCR result for document {resultPayload.DocumentId} to {_resultQueue}: {summary}");
 
                     await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false);
                 }
-                catch (Exception)
+                catch (Exception ex)
                 {
-                    _logger.Error("OCR worker error while processing message.");
-
+                    _logger.Error("OCR worker error while processing message.", ex);
                     if (_channel != null)
-                    {
-                        await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true);
-                    }
+                        await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false);
                 }
             };
+
 
             await _channel.BasicQosAsync(prefetchSize: 0, prefetchCount: 1, global: false);
 
@@ -273,6 +229,12 @@ namespace Paperless.OcrWorker
             {
                 _logger.Info("OCR worker stopping due to cancellation.");
             }
+        }
+
+        private string BuildSummary(string text, string title)
+        {
+            //replace with Gemini integration in future sprint
+            return text;
         }
         #endregion
 

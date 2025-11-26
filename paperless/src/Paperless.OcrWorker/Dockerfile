@@ -11,18 +11,18 @@ RUN apt-get update \
        libtesseract-dev \
     && rm -rf /var/lib/apt/lists/*
 
-ENV TESSDATA_PREFIX=/app
+ENV TESSDATA_PREFIX=/app/tessdata
 
 RUN ln -s /usr/lib/x86_64-linux-gnu/libdl.so.2 /usr/lib/x86_64-linux-gnu/libdl.so
 
 WORKDIR /app/x64
-RUN ln -s /usr/lib/x86_64-linux-gnu/liblept.so.5 /app/x64/libleptonica-1.82.0.so \
- && ln -s /usr/lib/x86_64-linux-gnu/libtesseract.so.5 /app/x64/libtesseract50.so
+RUN ln -s /usr/lib/x86_64-linux-gnu/liblept.so.5       /app/x64/libleptonica-1.82.0.so \
+ && ln -s /usr/lib/x86_64-linux-gnu/libtesseract.so.5  /app/x64/libtesseract50.so
 
 WORKDIR /app
 
 # ───────────────────────────────
-# BUILD STAGE (Debian-based SDK)
+# BUILD STAGE
 # ───────────────────────────────
 FROM mcr.microsoft.com/dotnet/sdk:9.0-bookworm-slim AS build
 WORKDIR /src

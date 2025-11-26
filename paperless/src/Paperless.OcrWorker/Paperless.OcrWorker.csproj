@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
@@ -12,8 +12,12 @@
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.4" />
     <PackageReference Include="Minio" Version="7.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="7.2.0" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
 	<ItemGroup>
 		<None Include="log4net.config" CopyToOutputDirectory="Always" />
+	</ItemGroup>
+	<ItemGroup>
+		<None Include="tessdata\**" CopyToOutputDirectory="Always" />
 	</ItemGroup>
 </Project>
