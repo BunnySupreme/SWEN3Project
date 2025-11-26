@@ -208,7 +208,7 @@ namespace Paperless.OcrWorker
                 {
                     _logger.Error("OCR worker error while processing message.", ex);
                     if (_channel != null)
-                        await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: false);
+                        await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true);
                 }
             };
 
