@@ -6,10 +6,10 @@ using System.Runtime.InteropServices;
 
 public class TesseractOcrEngineTests
 {
-    [Fact(Skip = "Integration test: requires native Tesseract/Ghostscript environment (same as OCR worker container).")]
+    [Fact]
     public async Task ExtractTextAsync_ReturnsText_ForSimplePdf()
     {
-        var pdfPath = Path.Combine("TestData", "hallo.pdf");
+        var pdfPath = Path.Combine("TestData", "Hallo.pdf");
         await using var pdf = File.OpenRead(pdfPath);
 
         var engine = new TesseractOcrEngine();

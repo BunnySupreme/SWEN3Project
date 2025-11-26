@@ -174,9 +174,10 @@ namespace Paperless.OcrWorker
                     var (docId, title) = OcrMessageParser.Parse(message, _logger);
 
                     var (resultDocId, summary) = await _jobHandler.HandleAsync(docId, title, ct);
+                    _logger.Info($"OCR worker created OCR result: {summary}");
 
                     // REMOVE LATER - Transitional code until proper summary generation is implemented - REMOVE LATER //
-                    summary = summary.Substring(0, 255);
+                    summary = summary[..Math.Min(summary.Length, 1000)];
                     // REMOVE LATER - Transitional code until proper summary generation is implemented - REMOVE LATER //
 
                     var resultPayload = new
@@ -203,16 +204,18 @@ namespace Paperless.OcrWorker
                         body: resultBody,
                         cancellationToken: ct);
 
-                    _logger.Info(
-                        $"OCR worker published OCR result for document {resultPayload.DocumentId} to {_resultQueue}: {summary}");
-
                     await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false);
                 }
                 catch (Exception ex)
                 {
                     _logger.Error("OCR worker error while processing message.", ex);
                     if (_channel != null)
-                        await _channel.BasicNackAsync(ea.DeliveryTag, multiple: false, requeue: true);
+                    {
+                        if (ea.Redelivered)
+                            await _channel.BasicNackAsync(ea.DeliveryTag, false, false); // drop on 2nd failure
+                        else
+                            await _channel.BasicNackAsync(ea.DeliveryTag, false, true);  // retry once
+                    }
                 }
             };
 
@@ -234,6 +237,8 @@ namespace Paperless.OcrWorker
                 _logger.Info("OCR worker stopping due to cancellation.");
             }
         }
+
+
         #endregion
 
         #region Stop / Dispose

@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Tesseract;
 
 namespace Paperless.OcrWorker
@@ -28,7 +29,10 @@ namespace Paperless.OcrWorker
                 // Ghostscript: convert PDF to PNG (one image per page)
                 var ghostScript = new ProcessStartInfo
                 {
-                    FileName = "gs",
+                    FileName = RuntimeInformation.IsOSPlatform(OSPlatform.Windows)
+                        ? "gswin64c.exe"
+                        : "gs",
+
                     Arguments = $"-dNOPAUSE -dBATCH -sDEVICE=png16m -r300 -sOutputFile={outputPattern} {tempPdf}",
                     RedirectStandardError = true,
                     RedirectStandardOutput = true,

@@ -34,7 +34,7 @@ public sealed class OcrJobHandler
 
         await using var pdfStream = await _store.GetDocumentAsync(documentId, ct);
 
-        var text = await _ocr.ExtractTextAsync(pdfStream, ct);
+        var text = await _ocr.ExtractTextAsync(pdfStream, ct) ?? string.Empty;
         var summary = BuildSummary(text, title);
 
         _logger.Info($"OCR result created for document {documentId}");
