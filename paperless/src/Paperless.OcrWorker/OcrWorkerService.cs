@@ -131,7 +131,7 @@ namespace Paperless.OcrWorker
                     _logger.Info("OCR worker connected to RabbitMQ.");
                     break;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     retryCount++;
                     _logger.Warn($"OCR worker failed to connect to RabbitMQ (attempt {retryCount + 1}/{maxRetries})");
@@ -246,7 +246,7 @@ namespace Paperless.OcrWorker
 
                     await _channel.BasicAckAsync(ea.DeliveryTag, multiple: false);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     _logger.Error("OCR worker error while processing message.");
 
