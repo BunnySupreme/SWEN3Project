@@ -141,8 +141,8 @@ test_worker_log_for_upload() {
 
   [ "$http_code" -eq 201 ] || fail "Upload for Worker-Test: expected 201, got: $http_code"
 
-  # short wait, to insure worker has time to consume
-  sleep 2
+  # short wait, to ensure worker has time to consume
+  sleep 30
 
   local after_log
   after_log="$(docker logs "$WORKER_CONTAINER_NAME" 2>&1 | wc -l || echo 0)"
