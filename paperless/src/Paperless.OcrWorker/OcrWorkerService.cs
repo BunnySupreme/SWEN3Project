@@ -175,6 +175,10 @@ namespace Paperless.OcrWorker
 
                     var (resultDocId, summary) = await _jobHandler.HandleAsync(docId, title, ct);
 
+                    // REMOVE LATER - Transitional code until proper summary generation is implemented - REMOVE LATER //
+                    summary = summary.Substring(0, 255);
+                    // REMOVE LATER - Transitional code until proper summary generation is implemented - REMOVE LATER //
+
                     var resultPayload = new
                     {
                         DocumentId = resultDocId == Guid.Empty ? Guid.NewGuid() : resultDocId,
