@@ -11,45 +11,61 @@ namespace Paperless.OcrWorker
         {
             _tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
         }
-        public Task<string> ExtractTextAsync(Stream pdfStream, CancellationToken ct = default)
+        public async Task<string> ExtractTextAsync(Stream pdfStream, CancellationToken ct = default)
         {
             using var pdfBytes = new MemoryStream();
-            pdfStream.CopyTo(pdfBytes);
+            await pdfStream.CopyToAsync(pdfBytes, ct);
 
-            // Ghostscript: convert PDF → PNG
             var tempPdf = Path.GetTempFileName();
-            var tempPng = tempPdf + ".png";
+            var tempDir = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+            Directory.CreateDirectory(tempDir);
+            var outputPattern = Path.Combine(tempDir, "page-%03d.png");
 
-            File.WriteAllBytes(tempPdf, pdfBytes.ToArray());
-
-            // Ghostscript
-            var ghostScript = new ProcessStartInfo
+            try
             {
-                FileName = "gs",
-                Arguments = $"-dNOPAUSE -dBATCH -sDEVICE=png16m -r300 -sOutputFile={tempPng} {tempPdf}",
-                RedirectStandardError = true,
-                RedirectStandardOutput = true,
-                UseShellExecute = false
-            };
+                await File.WriteAllBytesAsync(tempPdf, pdfBytes.ToArray(), ct);
 
-            using (var process = Process.Start(ghostScript))
-            {
-                process!.WaitForExit();
-                if (process.ExitCode != 0)
-                    throw new Exception("Ghostscript failed: " + process.StandardError.ReadToEnd());
+                // Ghostscript: convert PDF to PNG (one image per page)
+                var ghostScript = new ProcessStartInfo
+                {
+                    FileName = "gs",
+                    Arguments = $"-dNOPAUSE -dBATCH -sDEVICE=png16m -r300 -sOutputFile={outputPattern} {tempPdf}",
+                    RedirectStandardError = true,
+                    RedirectStandardOutput = true,
+                    UseShellExecute = false
+                };
+
+                using (var process = Process.Start(ghostScript))
+                {
+                    await process!.WaitForExitAsync();
+                    if (process.ExitCode != 0)
+                        throw new Exception("Ghostscript failed: " + await process.StandardError.ReadToEndAsync(ct));
+                }
+
+                // OCR each page using Tesseract and concatenate results
+                var pngFiles = Directory.GetFiles(tempDir, "page-*.png").OrderBy(f => f).ToList();
+                var fullTextBuilder = new System.Text.StringBuilder();
+
+                using var engine = new TesseractEngine(_tessdataPath, "deu", EngineMode.Default);
+
+                foreach (var pngFile in pngFiles)
+                {
+                    using var img = Pix.LoadFromFile(pngFile);
+                    using var page = engine.Process(img);
+                    fullTextBuilder.AppendLine(page.GetText());
+                    fullTextBuilder.AppendLine(); // Page separator
+                }
+
+                return fullTextBuilder.ToString();
             }
-
-            // OCR using Tesseract native engine
-            using var engine = new TesseractEngine(_tessdataPath, "deu", EngineMode.Default);
-            using var img = Pix.LoadFromFile(tempPng);
-            using var page = engine.Process(img);
-
-            var text = page.GetText();
-
-            File.Delete(tempPdf);
-            File.Delete(tempPng);
-
-            return Task.FromResult(text);
+            finally
+            {
+                // Clean up temporary files and directories
+                if (File.Exists(tempPdf))
+                    File.Delete(tempPdf);
+                if (Directory.Exists(tempDir))
+                    Directory.Delete(tempDir, true);
+            }
         }
     }
 }
