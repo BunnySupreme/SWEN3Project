@@ -230,12 +230,6 @@ namespace Paperless.OcrWorker
                 _logger.Info("OCR worker stopping due to cancellation.");
             }
         }
-
-        private string BuildSummary(string text, string title)
-        {
-            //replace with Gemini integration in future sprint
-            return text;
-        }
         #endregion
 
         #region Stop / Dispose
