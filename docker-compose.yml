@@ -118,6 +118,7 @@ services:
     depends_on:
       - paperless-rabbitmq
       - paperless-minio
+      - paperless-geminisummarizer
     environment:
       - RABBITMQ_HOST=${RABBITMQ_HOST}
       - RABBITMQ_PORT=${RABBITMQ_PORT}
@@ -125,8 +126,23 @@ services:
       - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
       - RABBITMQ_INPUTQUEUE=${RABBITMQ_INPUTQUEUE}
       - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
+      - GEMINI_BASE_URL=http://paperless-geminisummarizer:8090
     secrets:
       - minio_password
+    networks:
+      - paperless-network
+    restart: unless-stopped
+
+
+  paperless-geminisummarizer:
+    build:
+      context: ./paperless/src/Paperless.GeminiSummarizer
+      dockerfile: Dockerfile
+    container_name: paperless-geminisummarizer
+    ports:
+      - "8090:8090"
+    env_file:
+      - ./paperless/src/Paperless.GeminiSummarizer/.env
     networks:
       - paperless-network
     restart: unless-stopped
