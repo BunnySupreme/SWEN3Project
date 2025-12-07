@@ -16,6 +16,19 @@ services:
       - paperless-network
     restart: unless-stopped
 
+  paperless-adminer:
+    image: adminer:5.4.1
+    container_name: paperless-adminer
+    environment:
+      - ADMINER_DEFAULT_SERVER=paperless-postgres
+    ports:
+      - "8080:8080"
+    depends_on:
+      - paperless-postgres
+    networks:
+      - paperless-network
+    restart: unless-stopped
+
   paperless-rabbitmq:
     image: rabbitmq:4.2.0-management
     container_name: paperless-rabbitmq
