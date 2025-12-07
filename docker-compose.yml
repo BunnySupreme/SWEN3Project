@@ -141,8 +141,8 @@ services:
     container_name: paperless-geminisummarizer
     ports:
       - "8090:8090"
-    env_file:
-      - ./paperless/src/Paperless.GeminiSummarizer/.env
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     networks:
       - paperless-network
     restart: unless-stopped
