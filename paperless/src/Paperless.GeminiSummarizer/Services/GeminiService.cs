@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Net;
+using System.Text;
 using System.Text.Json;
 
 namespace Paperless.GeminiSummarizer.Services
@@ -45,15 +46,32 @@ namespace Paperless.GeminiSummarizer.Services
             _http.DefaultRequestHeaders.Clear();
             _http.DefaultRequestHeaders.Add("X-goog-api-key", _apiKey);
 
-            var response = await _http.PostAsync(
-                "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
-                body);
+            HttpResponseMessage response;
+            try
+            {
+                response = await _http.PostAsync(
+                    "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+                    body,
+                    ct);
+            }
+            catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+            {
+                throw new HttpRequestException("Gemini unreachable or timed out.", ex);
+            }
 
-            var content = await response.Content.ReadAsStringAsync();
+            var content = await response.Content.ReadAsStringAsync(ct);
 
             if (!response.IsSuccessStatusCode)
             {
-                return $"[Gemini error {(int)response.StatusCode}] {content}";
+                if ((int)response.StatusCode >= 500 ||
+                    response.StatusCode == HttpStatusCode.TooManyRequests ||
+                    response.StatusCode == HttpStatusCode.ServiceUnavailable)
+                {
+                    throw new HttpRequestException(
+                        $"Retryable Gemini upstream failure ({(int)response.StatusCode}). Content: {content}");
+                }
+                throw new InvalidOperationException(
+                    $"Non-retryable Gemini error ({(int)response.StatusCode}). Content: {content}");
             }
 
             using var doc = JsonDocument.Parse(content);
@@ -66,8 +84,10 @@ namespace Paperless.GeminiSummarizer.Services
                     .GetProperty("text")
                     .GetString();
 
+            if (string.IsNullOrWhiteSpace(summaryText))
+                throw new HttpRequestException("Gemini returned empty summary, treat as temporary failure.");
             Console.WriteLine("SUMMARY >>> " + summaryText);
-            return summaryText ?? string.Empty;
+            return summaryText;
         }
     }
 }
