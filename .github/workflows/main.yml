@@ -73,6 +73,7 @@ jobs:
         RABBITMQ_PORT: 5672
         RABBITMQ_INPUTQUEUE: paperless.ocr.input
         RABBITMQ_RESULTSQUEUE: paperless.ocr.results
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: docker compose -f "docker-compose.yml" up -d --build
 
     - name: Run integration tests
@@ -157,6 +158,8 @@ jobs:
         default_pass = '${{ secrets.RABBIT_PASSWORD }}'" > config/myrabbitmq.conf
 
     - name: Deploy to production
+      env:
+        GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: docker compose -f "docker-compose.yml" up -d
 
     - name: Clean up secret files
