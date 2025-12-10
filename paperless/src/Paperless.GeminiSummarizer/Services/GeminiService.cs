@@ -34,7 +34,7 @@ namespace Paperless.GeminiSummarizer.Services
                     temperature = 0.3,
                     topK = 40,
                     topP = 0.9,
-                    maxOutputTokens = 128
+                    maxOutputTokens = 1024
                 }
             };
 

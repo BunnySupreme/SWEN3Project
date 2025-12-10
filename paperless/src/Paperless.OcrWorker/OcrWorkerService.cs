@@ -28,6 +28,7 @@ namespace Paperless.OcrWorker
         private readonly OcrJobHandler _jobHandler;
         private readonly IMinioClient _minioClient;
         private readonly IOcrEngine _ocr;
+        private readonly IGeminiSummarizerClient _summarizerClient;
 
         private bool _initialized;
         private readonly SemaphoreSlim _initLock = new(1, 1);
@@ -35,7 +36,7 @@ namespace Paperless.OcrWorker
         #endregion
 
         #region Ctor
-        public OcrWorkerService(IOcrEngine ocr)
+        public OcrWorkerService(IOcrEngine ocr, IGeminiSummarizerClient summarizerClient)
         {
             _logger = LogManager.GetLogger(typeof(OcrWorkerService));
 
@@ -61,6 +62,8 @@ namespace Paperless.OcrWorker
             _ocr = ocr;
             _minioClient = minioClient;
             _jobHandler = new OcrJobHandler(store, _ocr, _logger);
+
+            _summarizerClient = summarizerClient;
         }
         #endregion
 
@@ -141,8 +144,8 @@ namespace Paperless.OcrWorker
                 }
                 catch (Exception)
                 {
-                    retryCount++;
                     _logger.Warn($"OCR worker failed to connect to RabbitMQ (attempt {retryCount + 1}/{maxRetries})");
+                    retryCount++;
 
                     if (retryCount >= maxRetries)
                     {
@@ -173,12 +176,10 @@ namespace Paperless.OcrWorker
 
                     var (docId, title) = OcrMessageParser.Parse(message, _logger);
 
-                    var (resultDocId, summary) = await _jobHandler.HandleAsync(docId, title, ct);
-                    _logger.Info($"OCR worker created OCR result: {summary}");
+                    var (resultDocId, docText) = await _jobHandler.HandleAsync(docId, title, ct);
+                    _logger.Info($"OCR worker created OCR result for doc with Id: {resultDocId}");
 
-                    // REMOVE LATER - Transitional code until proper summary generation is implemented - REMOVE LATER //
-                    summary = summary[..Math.Min(summary.Length, 1000)];
-                    // REMOVE LATER - Transitional code until proper summary generation is implemented - REMOVE LATER //
+                    var summary = await _summarizerClient.SummarizeTextAsync(docText, ct);
 
                     var resultPayload = new
                     {
