@@ -16,15 +16,15 @@ services:
       - paperless-network
     restart: unless-stopped
 
-  paperless-adminer:
-    image: adminer:5.4.1
-    container_name: paperless-adminer
-    environment:
-      - ADMINER_DEFAULT_SERVER=paperless-postgres
+  paperless-geminisummarizer:
+    build:
+      context: ./paperless/src/Paperless.GeminiSummarizer
+      dockerfile: Dockerfile
+    container_name: paperless-geminisummarizer
     ports:
-      - "8080:8080"
-    depends_on:
-      - paperless-postgres
+      - "8090:8090"
+    environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     networks:
       - paperless-network
     restart: unless-stopped
@@ -61,6 +61,46 @@ services:
       - paperless-network
     restart: unless-stopped
 
+  paperless-adminer:
+    image: adminer:5.4.1
+    container_name: paperless-adminer
+    environment:
+      - ADMINER_DEFAULT_SERVER=paperless-postgres
+    ports:
+      - "8080:8080"
+    depends_on:
+      - paperless-postgres
+    networks:
+      - paperless-network
+    restart: unless-stopped
+
+  paperless-elastic:
+    image: elasticsearch:9.2.2
+    container_name: paperless-elastic
+    ports:
+      - "9200:9200"
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+    volumes:
+      - elastic_data:/data
+    networks:
+      - paperless-network
+    restart: unless-stopped
+
+  paperless-kibana:
+    image: kibana:9.2.2
+    container_name: paperless-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_URL=http://localhost:9200
+    depends_on:
+      - paperless-elastic
+    networks:
+      - paperless-network
+    restart: unless-stopped
+
   paperless-backend:
     build:
       context: ./paperless/src/paperless
@@ -90,8 +130,33 @@ services:
       - paperless-postgres
       - paperless-rabbitmq
       - paperless-minio
+      - paperless-elastic
     secrets:
       - postgres_password
+      - minio_password
+    networks:
+      - paperless-network
+    restart: unless-stopped
+
+  paperless-ocrworker:
+    build:
+      context: ./paperless/src/Paperless.OcrWorker
+      dockerfile: Dockerfile
+    container_name: paperless-ocrworker
+    environment:
+      - RABBITMQ_HOST=${RABBITMQ_HOST}
+      - RABBITMQ_PORT=${RABBITMQ_PORT}
+      - RABBITMQ_USER=${RABBITMQ_USER}
+      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
+      - RABBITMQ_INPUTQUEUE=${RABBITMQ_INPUTQUEUE}
+      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
+      - GEMINI_BASE_URL=http://paperless-geminisummarizer:8090
+    depends_on:
+      - paperless-rabbitmq
+      - paperless-minio
+      - paperless-geminisummarizer
+      - paperless-elastic
+    secrets:
       - minio_password
     networks:
       - paperless-network
@@ -106,43 +171,6 @@ services:
       - "80:80"
     depends_on:
       - paperless-backend
-    networks:
-      - paperless-network
-    restart: unless-stopped
-    
-  paperless-ocrworker:
-    build:
-      context: ./paperless/src/Paperless.OcrWorker
-      dockerfile: Dockerfile
-    container_name: paperless-ocrworker
-    depends_on:
-      - paperless-rabbitmq
-      - paperless-minio
-      - paperless-geminisummarizer
-    environment:
-      - RABBITMQ_HOST=${RABBITMQ_HOST}
-      - RABBITMQ_PORT=${RABBITMQ_PORT}
-      - RABBITMQ_USER=${RABBITMQ_USER}
-      - RABBITMQ_PASSWORD=${RABBITMQ_PASSWORD}
-      - RABBITMQ_INPUTQUEUE=${RABBITMQ_INPUTQUEUE}
-      - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
-      - GEMINI_BASE_URL=http://paperless-geminisummarizer:8090
-    secrets:
-      - minio_password
-    networks:
-      - paperless-network
-    restart: unless-stopped
-
-
-  paperless-geminisummarizer:
-    build:
-      context: ./paperless/src/Paperless.GeminiSummarizer
-      dockerfile: Dockerfile
-    container_name: paperless-geminisummarizer
-    ports:
-      - "8090:8090"
-    environment:
-      - GEMINI_API_KEY=${GEMINI_API_KEY}
     networks:
       - paperless-network
     restart: unless-stopped
@@ -162,3 +190,4 @@ networks:
 volumes:
   postgres_data:
   minio_data:
+  elastic_data:
