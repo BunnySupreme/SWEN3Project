@@ -20,6 +20,7 @@ namespace Paperless.UnitTests
         private readonly Mock<IValidator<DocumentCreateDto>> _createValidatorMock;
         private readonly Mock<IValidator<DocumentUpdateDto>> _updateValidatorMock;
         private readonly Mock<IRabbitProducerService> _rabbitProducerMock;
+        private readonly Mock<IElasticService> _elasticServiceMock;
         private readonly DocumentService _service;
 
         public DocumentServiceValidationTests()
@@ -60,6 +61,7 @@ namespace Paperless.UnitTests
             _updateValidatorMock = new Mock<IValidator<DocumentUpdateDto>>();
 
             _rabbitProducerMock = new Mock<IRabbitProducerService>();
+            _elasticServiceMock = new Mock<IElasticService>();
 
             _service = new DocumentService(
                 _repoMock.Object, 
@@ -67,7 +69,8 @@ namespace Paperless.UnitTests
                 _mapperMock.Object, 
                 _createValidatorMock.Object, 
                 _updateValidatorMock.Object,
-                _rabbitProducerMock.Object);
+                _rabbitProducerMock.Object,
+                _elasticServiceMock.Object);
         }
 
         [Fact]

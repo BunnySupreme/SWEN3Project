@@ -1,13 +1,13 @@
 ﻿using AutoMapper;
 using FluentValidation;
 using log4net;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Minio;
 using Minio.DataModel.Args;
 using Paperless.Api;
 using Paperless.DAL;
 using Paperless.DAL.Models;
 using Paperless.DAL.Repositories;
+using Paperless.Search.Models;
 
 namespace Paperless.Services;
 
@@ -22,6 +22,7 @@ public sealed class DocumentService : IDocumentService
     private readonly IValidator<DocumentCreateDto> _createValidator;
     private readonly IValidator<DocumentUpdateDto> _updateValidator;
     private readonly IRabbitProducerService _rabbitProducer;
+    private readonly IElasticService _elasticService;
     private readonly ILog _logger;
     #endregion
 
@@ -32,7 +33,8 @@ public sealed class DocumentService : IDocumentService
         IMapper mapper,
         IValidator<DocumentCreateDto> createValidator,
         IValidator<DocumentUpdateDto> updateValidator,
-        IRabbitProducerService rabbitProducer)
+        IRabbitProducerService rabbitProducer,
+        IElasticService elasticService)
     {
         _repo = repo;
         _minioClient = new MinioClient()
@@ -45,10 +47,12 @@ public sealed class DocumentService : IDocumentService
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _rabbitProducer = rabbitProducer;
+        _elasticService = elasticService;
         _logger = LogManager.GetLogger(typeof(DocumentService));
     }
     #endregion
 
+    #region Methods
     // ─────────────────────────────────────────────
     // LIST
     // ─────────────────────────────────────────────
@@ -194,8 +198,10 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
     {
+        // Logger
         _logger.Info($"Updating document with ID: {dto.Id}");
 
+        // Validation
         var validation = await _updateValidator.ValidateAsync(dto, ct);
         if (!validation.IsValid)
         {
@@ -203,6 +209,7 @@ public sealed class DocumentService : IDocumentService
             throw new ValidationException(validation.Errors);
         }
 
+        // DB
         var entity = await _repo.ReadByIdAsync(dto.Id, ct);
         if (entity is null)
         {
@@ -217,6 +224,19 @@ public sealed class DocumentService : IDocumentService
 
         await _repo.CreateOrUpdateAsync(entity, ct);
         await _db.SaveChangesAsync(ct);
+
+        // Elastic Indexing
+        DocumentSearchModel searchDocument = new DocumentSearchModel
+        {
+            Id = entity.Id,
+            Title = entity.Title,
+            Summary = entity.Summary,
+            Tags = entity.Tags,
+            UploadedAt = entity.UploadedAt
+        };
+
+        await _elasticService.UpdateIndexAsync(searchDocument, ct);
+
         return true;
     }
 
@@ -225,8 +245,10 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
     {
+        // Logger
         _logger.Info($"Deleting document with ID: {id}");
 
+        // DB
         var entity = await _repo.ReadByIdAsync(id, ct);
         if (entity is null)
         {
@@ -236,6 +258,10 @@ public sealed class DocumentService : IDocumentService
 
         await _repo.DeleteByIdAsync(id, ct);
         await _db.SaveChangesAsync(ct);
+
+        // Elastic Indexing
+        await _elasticService.DeleteIndexAsync(id, ct);
+
         return true;
     }
 
@@ -256,4 +282,5 @@ public sealed class DocumentService : IDocumentService
             await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(BucketName));
         }
     }
+    #endregion
 }
