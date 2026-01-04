@@ -11,13 +11,15 @@ namespace Paperless.UnitTests;
 
 public class DocumentsControllerTests
 {
-    private readonly Mock<IDocumentService> _serviceMock;
+    private readonly Mock<IDocumentService> _documentServiceMock;
+    private readonly Mock<IElasticService> _elasticServiceMock;
     private readonly DocumentsController _controller;
 
     public DocumentsControllerTests()
     {
-        _serviceMock = new Mock<IDocumentService>();
-        _controller = new DocumentsController(_serviceMock.Object);
+        _documentServiceMock = new Mock<IDocumentService>();
+        _elasticServiceMock = new Mock<IElasticService>();
+        _controller = new DocumentsController(_documentServiceMock.Object, _elasticServiceMock.Object);
     }
 
     [Fact]
@@ -30,7 +32,7 @@ public class DocumentsControllerTests
             new DocumentReadDto(Guid.NewGuid(), "Title2", "Summary2", Array.Empty<string>(), DateTimeOffset.Now)
         };
 
-        _serviceMock
+        _documentServiceMock
             .Setup(s => s.ListAsync(It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(docs);
 
@@ -44,7 +46,7 @@ public class DocumentsControllerTests
         ok.Value.Should().BeAssignableTo<IEnumerable<DocumentReadDto>>();
         ((IEnumerable<DocumentReadDto>)ok.Value!).ToList().Should().BeEquivalentTo(docs, options => options.WithStrictOrdering());
 
-        _serviceMock.Verify(s => s.ListAsync(null, 0, 50, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.ListAsync(null, 0, 50, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -67,7 +69,7 @@ public class DocumentsControllerTests
         result3.Should().BeOfType<BadRequestObjectResult>();
 
         // Service should never be called when parameters are invalid
-        _serviceMock.Verify(s => s.ListAsync(It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
+        _documentServiceMock.Verify(s => s.ListAsync(It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -76,7 +78,7 @@ public class DocumentsControllerTests
         // Arrange
         var id = Guid.NewGuid();
         var dto = new DocumentReadDto(id, "T", "S", Array.Empty<string>(), DateTimeOffset.Now);
-        _serviceMock.Setup(s => s.GetAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(dto);
+        _documentServiceMock.Setup(s => s.GetAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(dto);
 
         // Act
         var result = await _controller.Get(id);
@@ -93,7 +95,7 @@ public class DocumentsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        _serviceMock.Setup(s => s.GetAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((DocumentReadDto?)null);
+        _documentServiceMock.Setup(s => s.GetAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((DocumentReadDto?)null);
 
         // Act
         var result = await _controller.Get(id);
@@ -111,7 +113,7 @@ public class DocumentsControllerTests
         var fileContent = Encoding.UTF8.GetBytes("PDF file content");
         var memoryStream = new MemoryStream(fileContent);
 
-        _serviceMock
+        _documentServiceMock
             .Setup(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()))!
             .ReturnsAsync((MemoryStream?)memoryStream);
 
@@ -125,7 +127,7 @@ public class DocumentsControllerTests
         fileResult.FileDownloadName.Should().Be($"{id}.pdf");
 
 
-        _serviceMock.Verify(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -133,7 +135,7 @@ public class DocumentsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        _serviceMock
+        _documentServiceMock
             .Setup(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()))!
             .ReturnsAsync((MemoryStream?)null);
 
@@ -144,7 +146,7 @@ public class DocumentsControllerTests
         result.Should().BeOfType<NotFoundResult>();
         ((NotFoundResult)result!).StatusCode.Should().Be(StatusCodes.Status404NotFound);
 
-        _serviceMock.Verify(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -154,7 +156,7 @@ public class DocumentsControllerTests
         var createDto = new DocumentCreateDto(Title: "New", Summary: "S", Tags: Array.Empty<string>());
         var created = new DocumentReadDto(Guid.NewGuid(), "New", "S", Array.Empty<string>(), DateTimeOffset.Now);
 
-        _serviceMock
+        _documentServiceMock
             .Setup(s => s.CreateAsync(It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(created);
 
@@ -168,7 +170,7 @@ public class DocumentsControllerTests
         createdAt.ActionName.Should().Be(nameof(DocumentsController.Get));
         createdAt.Value.Should().BeEquivalentTo(created);
 
-        _serviceMock.Verify(s => s.CreateAsync(createDto, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.CreateAsync(createDto, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // Note: 400 responses for Create are produced by the framework's automatic model validation (ApiController).
@@ -189,7 +191,7 @@ public class DocumentsControllerTests
 
         var created = new DocumentReadDto(Guid.NewGuid(), "test.pdf", string.Empty, Array.Empty<string>(), DateTimeOffset.Now);
 
-        _serviceMock
+        _documentServiceMock
             .Setup(s => s.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(created);
 
@@ -202,7 +204,7 @@ public class DocumentsControllerTests
         createdAt.StatusCode.Should().Be(StatusCodes.Status201Created);
         createdAt.Value.Should().BeEquivalentTo(created);
 
-        _serviceMock.Verify(s => s.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.UploadAsync(It.IsAny<IFormFile>(), It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -212,7 +214,7 @@ public class DocumentsControllerTests
         var id = Guid.NewGuid();
         var dto = new DocumentUpdateDto(Id: id, Title: "T", Summary: "S", Tags: Array.Empty<string>());
 
-        _serviceMock.Setup(s => s.UpdateAsync(dto, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _documentServiceMock.Setup(s => s.UpdateAsync(dto, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Update(id, dto);
@@ -220,7 +222,7 @@ public class DocumentsControllerTests
         // Assert
         result.Should().BeOfType<NoContentResult>();
         ((NoContentResult)result).StatusCode.Should().Be(StatusCodes.Status204NoContent);
-        _serviceMock.Verify(s => s.UpdateAsync(dto, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.UpdateAsync(dto, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -238,7 +240,7 @@ public class DocumentsControllerTests
         ((BadRequestObjectResult)result).StatusCode.Should().Be(StatusCodes.Status400BadRequest);
 
         // Ensure service was not called
-        _serviceMock.Verify(s => s.UpdateAsync(It.IsAny<DocumentUpdateDto>(), It.IsAny<CancellationToken>()), Times.Never);
+        _documentServiceMock.Verify(s => s.UpdateAsync(It.IsAny<DocumentUpdateDto>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -248,7 +250,7 @@ public class DocumentsControllerTests
         var id = Guid.NewGuid();
         var dto = new DocumentUpdateDto(Id: id, Title: "T", Summary: "S", Tags: Array.Empty<string>());
 
-        _serviceMock.Setup(s => s.UpdateAsync(dto, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _documentServiceMock.Setup(s => s.UpdateAsync(dto, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
         // Act
         var result = await _controller.Update(id, dto);
@@ -263,7 +265,7 @@ public class DocumentsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        _serviceMock.Setup(s => s.DeleteAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _documentServiceMock.Setup(s => s.DeleteAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(true);
 
         // Act
         var result = await _controller.Delete(id);
@@ -278,7 +280,7 @@ public class DocumentsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        _serviceMock.Setup(s => s.DeleteAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(false);
+        _documentServiceMock.Setup(s => s.DeleteAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync(false);
 
         // Act
         var result = await _controller.Delete(id);
