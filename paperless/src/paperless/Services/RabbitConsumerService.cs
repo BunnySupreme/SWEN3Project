@@ -1,6 +1,5 @@
 ﻿using System.Text;
 using System.Text.Json;
-using Elastic.Clients.Elasticsearch;
 using log4net;
 using Paperless.DAL;
 using Paperless.DAL.Models;
@@ -15,7 +14,6 @@ namespace Paperless.Services
     {
         #region Fields
         private readonly IServiceProvider _serviceProvider;
-        private readonly ElasticsearchClient _elasticClient;
         private IConnection? _connection;
         private IChannel? _channel;
         private readonly string _host;
@@ -27,10 +25,9 @@ namespace Paperless.Services
         #endregion
 
         #region Constructors
-        public RabbitConsumerService(IServiceProvider serviceProvider, ElasticsearchClient elasticClient, string host, int port, string username, string password, string queue)
+        public RabbitConsumerService(IServiceProvider serviceProvider, string host, int port, string username, string password, string queue)
         {
             _serviceProvider = serviceProvider;
-            _elasticClient = elasticClient;
             _host = host;
             _port = port;
             _username = username;
@@ -168,8 +165,6 @@ namespace Paperless.Services
                 _logger.Info($"Document with ID: {result.DocumentId} updated successfully.");
 
                 // Elastic Indexing
-                _logger.Info($"Indexing document into Elasticsearch. ID: '{result.DocumentId}'");
-
                 DocumentSearchModel searchDocument = new DocumentSearchModel
                 {
                     Id = result.DocumentId,
@@ -180,15 +175,9 @@ namespace Paperless.Services
                     UploadedAt = document.UploadedAt
                 };
 
-                var indexResponse = await _elasticClient.IndexAsync(searchDocument, i => i.Index("documents"), ct);
-                if (!indexResponse.IsValidResponse)
-                {
-                    _logger.Error($"ElasticSearch indexing failed for Document ID: {result.DocumentId}. Reason: {indexResponse.ElasticsearchServerError}");
-                }
-                else
-                {
-                    _logger.Info($"Document with ID: {result.DocumentId} indexed successfully in ElasticSearch.");
-                }
+                using var scopeElastic = _serviceProvider.CreateScope();
+                var elasticService = scopeElastic.ServiceProvider.GetRequiredService<IElasticService>();
+                await elasticService.CreateIndexAsync(searchDocument, ct);
             }
             else
             {

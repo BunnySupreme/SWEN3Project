@@ -52,6 +52,7 @@ builder.Services.AddDbContext<DataContext>(options =>
 
 // Elastic Search
 builder.Services.AddSingleton(new ElasticsearchClient(new Uri("http://paperless-elastic:9200")));
+builder.Services.AddScoped<IElasticService, ElasticService>();
 
 // RabbitMQ Services
 string rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "paperless-rabbitmq";
@@ -73,7 +74,6 @@ builder.Services.AddHostedService<RabbitConsumerService>(sp =>
 {
     return new RabbitConsumerService(
         sp,
-        sp.GetRequiredService<ElasticsearchClient>(),
         host: rabbitHost,
         port: rabbitPort,
         username: rabbitUsername,

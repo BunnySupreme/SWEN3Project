@@ -1,5 +1,4 @@
 ﻿using AutoMapper;
-using Elastic.Clients.Elasticsearch;
 using FluentValidation;
 using log4net;
 using Minio;
@@ -23,7 +22,7 @@ public sealed class DocumentService : IDocumentService
     private readonly IValidator<DocumentCreateDto> _createValidator;
     private readonly IValidator<DocumentUpdateDto> _updateValidator;
     private readonly IRabbitProducerService _rabbitProducer;
-    private readonly ElasticsearchClient _elasticClient;
+    private readonly IElasticService _elasticService;
     private readonly ILog _logger;
     #endregion
 
@@ -35,7 +34,7 @@ public sealed class DocumentService : IDocumentService
         IValidator<DocumentCreateDto> createValidator,
         IValidator<DocumentUpdateDto> updateValidator,
         IRabbitProducerService rabbitProducer,
-        ElasticsearchClient elasticClient)
+        IElasticService elasticService)
     {
         _repo = repo;
         _minioClient = new MinioClient()
@@ -48,7 +47,7 @@ public sealed class DocumentService : IDocumentService
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _rabbitProducer = rabbitProducer;
-        _elasticClient = elasticClient;
+        _elasticService = elasticService;
         _logger = LogManager.GetLogger(typeof(DocumentService));
     }
     #endregion
@@ -227,8 +226,6 @@ public sealed class DocumentService : IDocumentService
         await _db.SaveChangesAsync(ct);
 
         // Elastic Indexing
-        _logger.Info($"Updating indexed document in Elasticsearch. ID: '{entity.Id}'");
-
         DocumentSearchModel searchDocument = new DocumentSearchModel
         {
             Id = entity.Id,
@@ -238,15 +235,7 @@ public sealed class DocumentService : IDocumentService
             UploadedAt = entity.UploadedAt
         };
 
-        var indexResponse = await _elasticClient.IndexAsync(searchDocument, i => i.Index("documents"), ct);
-        if (!indexResponse.IsValidResponse)
-        {
-            _logger.Error($"ElasticSearch index updating failed for Document ID: {entity.Id}. Reason: {indexResponse.ElasticsearchServerError}");
-        }
-        else
-        {
-            _logger.Info($"Index for document with ID: {entity.Id} updated successfully in ElasticSearch.");
-        }
+        await _elasticService.UpdateIndexAsync(searchDocument, ct);
 
         return true;
     }
@@ -271,17 +260,7 @@ public sealed class DocumentService : IDocumentService
         await _db.SaveChangesAsync(ct);
 
         // Elastic Indexing
-        _logger.Info($"Deleting document index in Elasticsearch. ID: '{entity.Id}'");
-
-        var indexResponse = await _elasticClient.DeleteAsync("documents", id, ct);
-        if (!indexResponse.IsValidResponse)
-        {
-            _logger.Error($"ElasticSearch index deletion failed for Document ID: {entity.Id}. Reason: {indexResponse.ElasticsearchServerError} - Beware stale search results");
-        }
-        else
-        {
-            _logger.Info($"Index for document with ID: {entity.Id} successfully deleted from ElasticSearch.");
-        }
+        await _elasticService.DeleteIndexAsync(id, ct);
 
         return true;
     }
