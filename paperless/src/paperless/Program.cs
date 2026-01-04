@@ -9,6 +9,7 @@ using Paperless.DAL;
 using Paperless.DAL.Repositories;
 using Paperless.Services;
 using System.Text.Json;
+using Elastic.Clients.Elasticsearch;
 
 // ------------------------------------------------------------
 // CONFIGURE LOG4NET & CREATE LOGGER
@@ -49,6 +50,9 @@ builder.Services.AddDbContext<DataContext>(options =>
     options.UseNpgsql(Configuration.PostgresConnectionString);
 });
 
+// Elastic Search
+builder.Services.AddSingleton(new ElasticsearchClient(new Uri("http://paperless-elastic:9200")));
+
 // RabbitMQ Services
 string rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "paperless-rabbitmq";
 int rabbitPort = int.Parse(Environment.GetEnvironmentVariable("RABBITMQ_PORT") ?? "5672");
@@ -69,6 +73,7 @@ builder.Services.AddHostedService<RabbitConsumerService>(sp =>
 {
     return new RabbitConsumerService(
         sp,
+        sp.GetRequiredService<ElasticsearchClient>(),
         host: rabbitHost,
         port: rabbitPort,
         username: rabbitUsername,

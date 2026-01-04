@@ -1,13 +1,14 @@
 ﻿using AutoMapper;
+using Elastic.Clients.Elasticsearch;
 using FluentValidation;
 using log4net;
-using Microsoft.AspNetCore.Http.HttpResults;
 using Minio;
 using Minio.DataModel.Args;
 using Paperless.Api;
 using Paperless.DAL;
 using Paperless.DAL.Models;
 using Paperless.DAL.Repositories;
+using Paperless.Search.Models;
 
 namespace Paperless.Services;
 
@@ -22,6 +23,7 @@ public sealed class DocumentService : IDocumentService
     private readonly IValidator<DocumentCreateDto> _createValidator;
     private readonly IValidator<DocumentUpdateDto> _updateValidator;
     private readonly IRabbitProducerService _rabbitProducer;
+    private readonly ElasticsearchClient _elasticClient;
     private readonly ILog _logger;
     #endregion
 
@@ -32,7 +34,8 @@ public sealed class DocumentService : IDocumentService
         IMapper mapper,
         IValidator<DocumentCreateDto> createValidator,
         IValidator<DocumentUpdateDto> updateValidator,
-        IRabbitProducerService rabbitProducer)
+        IRabbitProducerService rabbitProducer,
+        ElasticsearchClient elasticClient)
     {
         _repo = repo;
         _minioClient = new MinioClient()
@@ -45,10 +48,12 @@ public sealed class DocumentService : IDocumentService
         _createValidator = createValidator;
         _updateValidator = updateValidator;
         _rabbitProducer = rabbitProducer;
+        _elasticClient = elasticClient;
         _logger = LogManager.GetLogger(typeof(DocumentService));
     }
     #endregion
 
+    #region Methods
     // ─────────────────────────────────────────────
     // LIST
     // ─────────────────────────────────────────────
@@ -194,8 +199,10 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
     {
+        // Logger
         _logger.Info($"Updating document with ID: {dto.Id}");
 
+        // Validation
         var validation = await _updateValidator.ValidateAsync(dto, ct);
         if (!validation.IsValid)
         {
@@ -203,6 +210,7 @@ public sealed class DocumentService : IDocumentService
             throw new ValidationException(validation.Errors);
         }
 
+        // DB
         var entity = await _repo.ReadByIdAsync(dto.Id, ct);
         if (entity is null)
         {
@@ -217,6 +225,29 @@ public sealed class DocumentService : IDocumentService
 
         await _repo.CreateOrUpdateAsync(entity, ct);
         await _db.SaveChangesAsync(ct);
+
+        // Elastic Indexing
+        _logger.Info($"Updating indexed document in Elasticsearch. ID: '{entity.Id}'");
+
+        DocumentSearchModel searchDocument = new DocumentSearchModel
+        {
+            Id = entity.Id,
+            Title = entity.Title,
+            Summary = entity.Summary,
+            Tags = entity.Tags,
+            UploadedAt = entity.UploadedAt
+        };
+
+        var indexResponse = await _elasticClient.IndexAsync(searchDocument, i => i.Index("documents"), ct);
+        if (!indexResponse.IsValidResponse)
+        {
+            _logger.Error($"ElasticSearch index updating failed for Document ID: {entity.Id}. Reason: {indexResponse.ElasticsearchServerError}");
+        }
+        else
+        {
+            _logger.Info($"Index for document with ID: {entity.Id} updated successfully in ElasticSearch.");
+        }
+
         return true;
     }
 
@@ -225,8 +256,10 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
     {
+        // Logger
         _logger.Info($"Deleting document with ID: {id}");
 
+        // DB
         var entity = await _repo.ReadByIdAsync(id, ct);
         if (entity is null)
         {
@@ -236,6 +269,20 @@ public sealed class DocumentService : IDocumentService
 
         await _repo.DeleteByIdAsync(id, ct);
         await _db.SaveChangesAsync(ct);
+
+        // Elastic Indexing
+        _logger.Info($"Deleting document index in Elasticsearch. ID: '{entity.Id}'");
+
+        var indexResponse = await _elasticClient.DeleteAsync("documents", id, ct);
+        if (!indexResponse.IsValidResponse)
+        {
+            _logger.Error($"ElasticSearch index deletion failed for Document ID: {entity.Id}. Reason: {indexResponse.ElasticsearchServerError} - Beware stale search results");
+        }
+        else
+        {
+            _logger.Info($"Index for document with ID: {entity.Id} successfully deleted from ElasticSearch.");
+        }
+
         return true;
     }
 
@@ -256,4 +303,5 @@ public sealed class DocumentService : IDocumentService
             await _minioClient.MakeBucketAsync(new MakeBucketArgs().WithBucket(BucketName));
         }
     }
+    #endregion
 }

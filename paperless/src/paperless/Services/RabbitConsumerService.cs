@@ -1,9 +1,11 @@
 ﻿using System.Text;
 using System.Text.Json;
+using Elastic.Clients.Elasticsearch;
 using log4net;
 using Paperless.DAL;
 using Paperless.DAL.Models;
 using Paperless.DAL.Repositories;
+using Paperless.Search.Models;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -13,6 +15,7 @@ namespace Paperless.Services
     {
         #region Fields
         private readonly IServiceProvider _serviceProvider;
+        private readonly ElasticsearchClient _elasticClient;
         private IConnection? _connection;
         private IChannel? _channel;
         private readonly string _host;
@@ -24,9 +27,10 @@ namespace Paperless.Services
         #endregion
 
         #region Constructors
-        public RabbitConsumerService(IServiceProvider serviceProvider, string host, int port, string username, string password, string queue)
+        public RabbitConsumerService(IServiceProvider serviceProvider, ElasticsearchClient elasticClient, string host, int port, string username, string password, string queue)
         {
             _serviceProvider = serviceProvider;
+            _elasticClient = elasticClient;
             _host = host;
             _port = port;
             _username = username;
@@ -113,7 +117,7 @@ namespace Paperless.Services
 
                     if (result != null)
                     {
-                        await ProcessSummaryAsync(result);
+                        await ProcessSummaryAsync(result, ct);
                         await _channel.BasicAckAsync(eventArgs.DeliveryTag, false);
                     }
                 }
@@ -141,7 +145,7 @@ namespace Paperless.Services
             }
         }
 
-        private async Task ProcessSummaryAsync(ResultModel result)
+        private async Task ProcessSummaryAsync(ResultModel result, CancellationToken ct)
         {
             _logger.Info($"Processing summary for Document ID: {result.DocumentId}");
 
@@ -151,7 +155,7 @@ namespace Paperless.Services
             var db = scope.ServiceProvider.GetRequiredService<DataContext>();
 
             // Update document summary in database
-            var document = await documentRepo.ReadByIdAsync(result.DocumentId);
+            var document = await documentRepo.ReadByIdAsync(result.DocumentId, ct);
             if (document != null)
             {
                 document.Update(
@@ -159,9 +163,32 @@ namespace Paperless.Services
                     summary: result.Summary, // Only summary needs an update
                     tags: document.Tags);
 
-                await documentRepo.CreateOrUpdateAsync(document);
-                await db.SaveChangesAsync();
+                await documentRepo.CreateOrUpdateAsync(document, ct);
+                await db.SaveChangesAsync(ct);
                 _logger.Info($"Document with ID: {result.DocumentId} updated successfully.");
+
+                // Elastic Indexing
+                _logger.Info($"Indexing document into Elasticsearch. ID: '{result.DocumentId}'");
+
+                DocumentSearchModel searchDocument = new DocumentSearchModel
+                {
+                    Id = result.DocumentId,
+                    Title = document.Title,
+                    OcrText = result.OcrText,
+                    Summary = result.Summary,
+                    Tags = document.Tags,
+                    UploadedAt = document.UploadedAt
+                };
+
+                var indexResponse = await _elasticClient.IndexAsync(searchDocument, i => i.Index("documents"), ct);
+                if (!indexResponse.IsValidResponse)
+                {
+                    _logger.Error($"ElasticSearch indexing failed for Document ID: {result.DocumentId}. Reason: {indexResponse.ElasticsearchServerError}");
+                }
+                else
+                {
+                    _logger.Info($"Document with ID: {result.DocumentId} indexed successfully in ElasticSearch.");
+                }
             }
             else
             {
