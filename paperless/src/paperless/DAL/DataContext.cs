@@ -6,11 +6,13 @@ namespace Paperless.DAL
     public class DataContext : DbContext
     {
         #region Constructors
-        public DataContext(DbContextOptions<DataContext> options) : base(options) { } // Allows Dependency Injection in Program.cs
+        public DataContext(DbContextOptions<DataContext> options) : base(options) { }
         #endregion
 
         #region DbSets
         public DbSet<DocumentModel> Documents { get; set; }
+        public DbSet<UserModel> Users => Set<UserModel>();
+        public DbSet<SessionModel> Sessions => Set<SessionModel>();
         #endregion
 
         #region Builders
