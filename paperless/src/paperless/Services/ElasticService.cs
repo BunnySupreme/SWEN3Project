@@ -1,6 +1,7 @@
-﻿using Elastic.Clients.Elasticsearch;
+﻿using AutoMapper;
+using Elastic.Clients.Elasticsearch;
 using log4net;
-using Minio.DataModel.Notification;
+using Paperless.Api;
 using Paperless.Search.Models;
 
 namespace Paperless.Services
@@ -9,18 +10,57 @@ namespace Paperless.Services
     {
         #region Fields
         private readonly ElasticsearchClient _elasticClient;
+        private readonly IMapper _mapper;
         private readonly ILog _logger;
         #endregion
 
         #region Constructors
-        public ElasticService(ElasticsearchClient elasticClient)
+        public ElasticService(ElasticsearchClient elasticClient, IMapper mapper)
         {
             _elasticClient = elasticClient;
+            _mapper = mapper;
             _logger = LogManager.GetLogger(typeof(ElasticService));
         }
         #endregion
 
         #region Methods
+        // ─────────────────────────────────────────────
+        // SEARCH
+        // ─────────────────────────────────────────────
+        public async Task<IReadOnlyList<DocumentReadDto>> SearchAsync(string searchTerm, CancellationToken ct)
+        {
+            _logger.Info($"Searching for documents matching searchTerm: {searchTerm}");
+
+            var searchResponse = await _elasticClient.SearchAsync<DocumentSearchModel>(search => search
+                .Indices("documents")
+                .Query(query => query
+                    .MultiMatch(match => match
+                        .Query(searchTerm)
+                        .Fields(
+                            doc => doc.Title,
+                            doc => doc.OcrText,
+                            doc => doc.Summary,
+                            doc => doc.Tags
+                        )
+                        .Fuzziness(new Fuzziness(2))
+                    )
+                )
+                .Size(10) // Maximum number of results to return
+            );
+
+            if (!searchResponse.IsValidResponse)
+            {
+                _logger.Error($"ElasticSearch search failed. Reason: {searchResponse.ElasticsearchServerError}");
+                return Array.Empty<DocumentReadDto>();
+            }
+            else
+            {
+                _logger.Info($"ElasticSearch search completed successfully. Found {searchResponse.Hits.Count} documents.");
+            }
+
+            return _mapper.Map<IReadOnlyList<DocumentReadDto>>(searchResponse.Documents);
+        }
+
         // ─────────────────────────────────────────────
         // CREATE INDEX
         // ─────────────────────────────────────────────
