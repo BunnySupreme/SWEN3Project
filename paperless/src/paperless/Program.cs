@@ -81,6 +81,8 @@ builder.Services.AddScoped<IDocumentService, DocumentService>();
 
 // Document Repository
 builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 
 // Build
 var app = builder.Build();
