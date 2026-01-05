@@ -42,7 +42,7 @@ namespace Paperless.Services
                             doc => doc.Summary,
                             doc => doc.Tags
                         )
-                        .Fuzziness(new Fuzziness(2))
+                        .Fuzziness(new Fuzziness("AUTO"))
                     )
                 )
                 .Size(10) // Maximum number of results to return
