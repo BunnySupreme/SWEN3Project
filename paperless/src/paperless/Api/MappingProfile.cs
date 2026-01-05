@@ -1,6 +1,7 @@
 ﻿using AutoMapper;
 using Paperless.Api;
 using Paperless.DAL.Models;
+using Paperless.Search.Models;
 
 namespace paperless.Api
 {
@@ -16,6 +17,12 @@ namespace paperless.Api
                .ForCtorParam(nameof(DocumentReadDto.Tags), opt => opt.MapFrom(src => SplitTags(src.Tags)))
                .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt));
 
+            CreateMap<DocumentSearchModel, DocumentReadDto>()
+                .ForCtorParam(nameof(DocumentReadDto.Id), opt => opt.MapFrom(src => src.Id))
+                .ForCtorParam(nameof(DocumentReadDto.Title), opt => opt.MapFrom(src => src.Title))
+                .ForCtorParam(nameof(DocumentReadDto.Summary), opt => opt.MapFrom(src => src.Summary))
+                .ForCtorParam(nameof(DocumentReadDto.Tags), opt => opt.MapFrom(src => SplitTags(src.Tags)))
+                .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt));
 
             CreateMap<DocumentCreateDto, DocumentModel>()
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))

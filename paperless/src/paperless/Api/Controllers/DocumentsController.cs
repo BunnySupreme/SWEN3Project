@@ -9,9 +9,14 @@ public class DocumentsController : ControllerBase
 {
     private const int DefaultTake = 50;
     private const int MaxTake = 100;
-    private readonly IDocumentService _svc;
+    private readonly IDocumentService _documentSvc;
+    private readonly IElasticService _elasticSvc;
 
-    public DocumentsController(IDocumentService svc) => _svc = svc;
+    public DocumentsController(IDocumentService DocumentSvc, IElasticService elasticSvc)
+    {
+        _documentSvc = DocumentSvc;
+        _elasticSvc = elasticSvc;
+    }
 
     // ─────────────────────────────────────────────
     // LIST
@@ -28,7 +33,7 @@ public class DocumentsController : ControllerBase
         if (skip < 0 || take < 1 || take > MaxTake)
             return BadRequest(new { message = $"skip >= 0, 1 <= take <= {MaxTake}" });
 
-        var docs = await _svc.ListAsync(title, skip, take, ct);
+        var docs = await _documentSvc.ListAsync(title, skip, take, ct);
         return Ok(docs);
     }
 
@@ -40,7 +45,7 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct = default)
     {
-        var doc = await _svc.GetAsync(id, ct);
+        var doc = await _documentSvc.GetAsync(id, ct);
         return doc is null ? NotFound() : Ok(doc);
     }
 
@@ -52,13 +57,31 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct = default)
     {
-        var memoryStream = await _svc.DownloadAsync(id, ct);
+        var memoryStream = await _documentSvc.DownloadAsync(id, ct);
         if (memoryStream is null)
             return NotFound();
 
         var fileName = $"{id}.pdf";
 
         return File(memoryStream, "application/pdf", fileName);
+    }
+
+    // ─────────────────────────────────────────────
+    // SEARCH
+    // ─────────────────────────────────────────────
+    [HttpPost("search")] // POST to allow complex search criteria in body and avoid URL length limits
+    [ProducesResponseType(typeof(IEnumerable<DocumentReadDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Search([FromBody] string searchTerm, CancellationToken ct = default)
+    {
+        if(string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return BadRequest(new { message = "Search term cannot be empty" });
+        }
+
+        var results = await _elasticSvc.SearchAsync(searchTerm, ct);
+
+        return Ok(results);
     }
 
     // ─────────────────────────────────────────────
@@ -71,7 +94,7 @@ public class DocumentsController : ControllerBase
         [FromBody] DocumentCreateDto dto,
         CancellationToken ct = default)
     {
-        var created = await _svc.CreateAsync(dto, ct);
+        var created = await _documentSvc.CreateAsync(dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
@@ -120,7 +143,7 @@ public class DocumentsController : ControllerBase
             Tags: tagList
         );
 
-        var created = await _svc.UploadAsync(file, dto, ct);
+        var created = await _documentSvc.UploadAsync(file, dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
@@ -138,7 +161,7 @@ public class DocumentsController : ControllerBase
     {
         if (id != dto.Id) return BadRequest(new { message = "Route id must match body id" });
 
-        var ok = await _svc.UpdateAsync(dto, ct);
+        var ok = await _documentSvc.UpdateAsync(dto, ct);
         return ok ? NoContent() : NotFound();
     }
 
@@ -150,7 +173,7 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
     {
-        var ok = await _svc.DeleteAsync(id, ct);
+        var ok = await _documentSvc.DeleteAsync(id, ct);
         return ok ? NoContent() : NotFound();
     }
 }
