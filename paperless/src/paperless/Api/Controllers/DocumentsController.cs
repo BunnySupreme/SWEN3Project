@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Paperless.Services;
+using System.Security.Claims;
 
 namespace Paperless.Api.Controllers;
 
+[Authorize]
 [ApiController]
 [Route("api/[controller]")]
 public class DocumentsController : ControllerBase
@@ -28,7 +31,9 @@ public class DocumentsController : ControllerBase
         if (skip < 0 || take < 1 || take > MaxTake)
             return BadRequest(new { message = $"skip >= 0, 1 <= take <= {MaxTake}" });
 
-        var docs = await _svc.ListAsync(title, skip, take, ct);
+        var userId = GetUserId();
+        var docs = await _svc.ListAsync(userId, title, skip, take, ct);
+
         return Ok(docs);
     }
 
@@ -40,7 +45,8 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct = default)
     {
-        var doc = await _svc.GetAsync(id, ct);
+        var userId = GetUserId();
+        var doc = await _svc.GetAsync(userId, id, ct);
         return doc is null ? NotFound() : Ok(doc);
     }
 
@@ -52,7 +58,8 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct = default)
     {
-        var memoryStream = await _svc.DownloadAsync(id, ct);
+        var userId = GetUserId();
+        var memoryStream = await _svc.DownloadAsync(userId, id, ct);
         if (memoryStream is null)
             return NotFound();
 
@@ -71,7 +78,8 @@ public class DocumentsController : ControllerBase
         [FromBody] DocumentCreateDto dto,
         CancellationToken ct = default)
     {
-        var created = await _svc.CreateAsync(dto, ct);
+        var userId = GetUserId();
+        var created = await _svc.CreateAsync(userId, dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
@@ -120,7 +128,8 @@ public class DocumentsController : ControllerBase
             Tags: tagList
         );
 
-        var created = await _svc.UploadAsync(file, dto, ct);
+        var userId = GetUserId();
+        var created = await _svc.UploadAsync(userId, file, dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
@@ -138,7 +147,8 @@ public class DocumentsController : ControllerBase
     {
         if (id != dto.Id) return BadRequest(new { message = "Route id must match body id" });
 
-        var ok = await _svc.UpdateAsync(dto, ct);
+        var userId = GetUserId();
+        var ok = await _svc.UpdateAsync(userId, dto, ct);
         return ok ? NoContent() : NotFound();
     }
 
@@ -150,7 +160,22 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
     {
-        var ok = await _svc.DeleteAsync(id, ct);
+        var userId = GetUserId();
+        var ok = await _svc.DeleteAsync(userId, id, ct);
         return ok ? NoContent() : NotFound();
+    }
+
+    // ─────────────────────────────────────────────
+    // HELPERS
+    // ─────────────────────────────────────────────
+    private Guid GetUserId()
+    {
+        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                      ?? User.FindFirstValue("sub");
+
+        if (!Guid.TryParse(userIdStr, out var userId))
+            throw new UnauthorizedAccessException("Invalid or missing user id claim.");
+
+        return userId;
     }
 }

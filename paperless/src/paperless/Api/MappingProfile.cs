@@ -14,18 +14,21 @@ namespace paperless.Api
                .ForCtorParam(nameof(DocumentReadDto.Title), opt => opt.MapFrom(src => src.Title))
                .ForCtorParam(nameof(DocumentReadDto.Summary), opt => opt.MapFrom(src => src.Summary))
                .ForCtorParam(nameof(DocumentReadDto.Tags), opt => opt.MapFrom(src => SplitTags(src.Tags)))
-               .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt));
+               .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt))
+               .ForCtorParam(nameof(DocumentReadDto.UserId), opt => opt.MapFrom(src => src.UserId));
 
 
             CreateMap<DocumentCreateDto, DocumentModel>()
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
-                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => JoinTags(src.Tags)));
+                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => JoinTags(src.Tags)))
+                .ForMember(dest => dest.UserId, opt => opt.Ignore());
 
             CreateMap<DocumentUpdateDto, DocumentModel>() // No Id mapping, as we do not wish to update the Id
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
-                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => JoinTags(src.Tags)));
+                .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => JoinTags(src.Tags)))
+                .ForMember(dest => dest.UserId, opt => opt.Ignore());
         }
         #endregion
 
