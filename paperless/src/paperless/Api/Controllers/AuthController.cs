@@ -1,29 +1,29 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Paperless.Services;
-
-namespace Paperless.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class AuthController(IAuthService auth) : ControllerBase
+public sealed class AuthController : ControllerBase
 {
+    private readonly IAuthService _auth;
+    public AuthController(IAuthService auth) => _auth = auth;
+
     [HttpPost("register")]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req, CancellationToken ct)
     {
-        await auth.RegisterAsync(req.Username, req.Password, ct);
+        await _auth.RegisterAsync(req, ct);
         return NoContent();
     }
 
     [HttpPost("login")]
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
-        => Ok(await auth.LoginAsync(req.Username, req.Password, ct));
+        => Ok(await _auth.LoginAsync(req, ct));
 
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(CancellationToken ct)
     {
         var token = ReadBearerToken(Request);
         if (token is null) return Unauthorized();
-        await auth.LogoutAsync(token, ct);
+        await _auth.LogoutAsync(token, ct);
         return NoContent();
     }
 
@@ -31,10 +31,8 @@ public class AuthController(IAuthService auth) : ControllerBase
     {
         if (!req.Headers.TryGetValue("Authorization", out var h)) return null;
         var s = h.ToString();
-        return s.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? s["Bearer ".Length..].Trim() : null;
+        return s.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+            ? s["Bearer ".Length..].Trim()
+            : null;
     }
 }
-
-public record RegisterRequest(string Username, string Password);
-public record LoginRequest(string Username, string Password);
-public record AuthResponse(string Token, DateTimeOffset ExpiresAt);

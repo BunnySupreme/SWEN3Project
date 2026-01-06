@@ -35,6 +35,9 @@ namespace Paperless.DAL.Repositories
         public Task<DocumentModel?> ReadByIdAndUserIdAsync(Guid id, Guid userId, CancellationToken ct = default) =>
         _db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId, ct);
 
+        public Task<DocumentModel?> ReadByIdAsync(Guid id, CancellationToken ct = default) =>
+        _db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id, ct);
+
         public Task<List<DocumentModel>> ReadListAsync(Guid userId, string? title, int skip, int take, CancellationToken ct = default)
         {
             IQueryable<DocumentModel> q = _db.Documents.AsNoTracking().Where(d => d.UserId == userId);
@@ -65,6 +68,9 @@ namespace Paperless.DAL.Repositories
 
         public async Task<bool> ExistsForUserAsync(Guid id, Guid userId, CancellationToken ct = default) =>
         await _db.Documents.AsNoTracking().AnyAsync(d => d.Id == id && d.UserId == userId, ct);
+
+        public Task<List<DocumentModel>> ReadAllAsync(CancellationToken ct = default) =>
+        _db.Documents.AsNoTracking().ToListAsync(ct);
         #endregion
     }
 }

@@ -20,22 +20,22 @@ public sealed class SessionAuthHandler : AuthenticationHandler<AuthenticationSch
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (!Request.Headers.TryGetValue("Authorization", out var h))
+        if (!Request.Headers.TryGetValue("Authorization", out var authHeader))
             return AuthenticateResult.NoResult();
 
-        var s = h.ToString();
-        if (!s.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        var header = authHeader.ToString();
+        if (!header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
             return AuthenticateResult.NoResult();
 
-        var token = s["Bearer ".Length..].Trim();
+        var token = header["Bearer ".Length..].Trim();
         if (string.IsNullOrWhiteSpace(token))
             return AuthenticateResult.Fail("Missing token.");
 
-        var session = await _sessions.FindByTokenAsync(token, Context.RequestAborted);
-        if (session == null)
+        var session = await _sessions.ReadByTokenAsync(token, Context.RequestAborted);
+        if (session is null)
             return AuthenticateResult.Fail("Invalid token.");
 
-        if (session.RevokedAt != null || session.ExpiresAt <= DateTimeOffset.UtcNow)
+        if (session.RevokedAt is not null || session.ExpiresAt <= DateTimeOffset.UtcNow)
             return AuthenticateResult.Fail("Session expired or revoked.");
 
         var claims = new[]

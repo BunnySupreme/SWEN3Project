@@ -92,7 +92,10 @@ builder.Services
     .AddAuthentication("Session")
     .AddScheme<AuthenticationSchemeOptions, SessionAuthHandler>("Session", _ => { });
 
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options =>
+{
+    options.FallbackPolicy = options.DefaultPolicy;
+});
 
 // Build
 var app = builder.Build();

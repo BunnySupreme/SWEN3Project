@@ -14,8 +14,7 @@ namespace paperless.Api
                .ForCtorParam(nameof(DocumentReadDto.Title), opt => opt.MapFrom(src => src.Title))
                .ForCtorParam(nameof(DocumentReadDto.Summary), opt => opt.MapFrom(src => src.Summary))
                .ForCtorParam(nameof(DocumentReadDto.Tags), opt => opt.MapFrom(src => SplitTags(src.Tags)))
-               .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt))
-               .ForCtorParam(nameof(DocumentReadDto.UserId), opt => opt.MapFrom(src => src.UserId));
+               .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt));
 
 
             CreateMap<DocumentCreateDto, DocumentModel>()
