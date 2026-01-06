@@ -6,7 +6,7 @@ import {
   createWebHistory,
 } from 'vue-router'
 import routes from './routes'
-import { getToken } from 'src/services/authToken' // adjust path
+import { getToken } from 'src/services/authToken'
 
 export default defineRouter(function () {
   const createHistory = process.env.SERVER
