@@ -13,6 +13,7 @@ public class DocumentsController : ControllerBase
     private const int DefaultTake = 50;
     private const int MaxTake = 100;
     private readonly IDocumentService _svc;
+    private readonly IAuthService _auth;
 
     public DocumentsController(IDocumentService svc) => _svc = svc;
 
@@ -31,8 +32,9 @@ public class DocumentsController : ControllerBase
         if (skip < 0 || take < 1 || take > MaxTake)
             return BadRequest(new { message = $"skip >= 0, 1 <= take <= {MaxTake}" });
 
-        var userId = GetUserId();
-        var docs = await _svc.ListAsync(userId, title, skip, take, ct);
+        var userId = await GetUserIdOrNull(ct);
+        if (userId is null) return Unauthorized();
+        var docs = await _svc.ListAsync(userId.Value, title, skip, take, ct);
 
         return Ok(docs);
     }
@@ -45,8 +47,9 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Get(Guid id, CancellationToken ct = default)
     {
-        var userId = GetUserId();
-        var doc = await _svc.GetAsync(userId, id, ct);
+        var userId = await GetUserIdOrNull(ct);
+        if (userId is null) return Unauthorized();
+        var doc = await _svc.GetAsync(userId.Value, id, ct);
         return doc is null ? NotFound() : Ok(doc);
     }
 
@@ -58,8 +61,9 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Download(Guid id, CancellationToken ct = default)
     {
-        var userId = GetUserId();
-        var memoryStream = await _svc.DownloadAsync(userId, id, ct);
+        var userId = await GetUserIdOrNull(ct);
+        if (userId is null) return Unauthorized();
+        var memoryStream = await _svc.DownloadAsync(userId.Value, id, ct);
         if (memoryStream is null)
             return NotFound();
 
@@ -78,8 +82,9 @@ public class DocumentsController : ControllerBase
         [FromBody] DocumentCreateDto dto,
         CancellationToken ct = default)
     {
-        var userId = GetUserId();
-        var created = await _svc.CreateAsync(userId, dto, ct);
+        var userId = await GetUserIdOrNull(ct);
+        if (userId is null) return Unauthorized();
+        var created = await _svc.CreateAsync(userId.Value, dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
@@ -128,8 +133,9 @@ public class DocumentsController : ControllerBase
             Tags: tagList
         );
 
-        var userId = GetUserId();
-        var created = await _svc.UploadAsync(userId, file, dto, ct);
+        var userId = await GetUserIdOrNull(ct);
+        if (userId is null) return Unauthorized();
+        var created = await _svc.UploadAsync(userId.Value, file, dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
@@ -147,8 +153,9 @@ public class DocumentsController : ControllerBase
     {
         if (id != dto.Id) return BadRequest(new { message = "Route id must match body id" });
 
-        var userId = GetUserId();
-        var ok = await _svc.UpdateAsync(userId, dto, ct);
+        var userId = await GetUserIdOrNull(ct);
+        if (userId is null) return Unauthorized();
+        var ok = await _svc.UpdateAsync(userId.Value, dto, ct);
         return ok ? NoContent() : NotFound();
     }
 
@@ -160,22 +167,23 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken ct = default)
     {
-        var userId = GetUserId();
-        var ok = await _svc.DeleteAsync(userId, id, ct);
+        var userId = await GetUserIdOrNull(ct);
+        if (userId is null) return Unauthorized();
+        var ok = await _svc.DeleteAsync(userId.Value, id, ct);
         return ok ? NoContent() : NotFound();
     }
 
     // ─────────────────────────────────────────────
     // HELPERS
     // ─────────────────────────────────────────────
-    private Guid GetUserId()
+    private async Task<Guid?> GetUserIdOrNull(CancellationToken ct)
     {
-        var userIdStr = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                      ?? User.FindFirstValue("sub");
+        var token = Request.Headers.Authorization.ToString();
+        if (string.IsNullOrWhiteSpace(token)) return null;
+        if (token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            token = token["Bearer ".Length..].Trim();
 
-        if (!Guid.TryParse(userIdStr, out var userId))
-            throw new UnauthorizedAccessException("Invalid or missing user id claim.");
-
-        return userId;
+        var user = await _auth.ValidateTokenAsync(token, ct);
+        return user?.Id;
     }
 }

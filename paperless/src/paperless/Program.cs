@@ -2,6 +2,7 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using log4net;
 using log4net.Config;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using paperless.Api;
@@ -85,10 +86,20 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 
 // AuthService
-//builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services
+    .AddAuthentication("Session")
+    .AddScheme<AuthenticationSchemeOptions, SessionAuthHandler>("Session", _ => { });
+
+builder.Services.AddAuthorization();
 
 // Build
 var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 
 // ------------------------------------------------------------
 // EXCEPTION HANDLING MIDDLEWARE (FOR UNHANDLED EXCEPTIONS)
