@@ -18,6 +18,7 @@ public class DocumentsControllerTests
 
     private readonly Mock<IDocumentService> _documentServiceMock;
     private readonly Mock<IElasticService> _elasticServiceMock;
+    private readonly Mock<IAuthService> _authMock;
     private readonly DocumentsController _controller;
 
 
@@ -92,9 +93,8 @@ public class DocumentsControllerTests
         result2.Should().BeOfType<BadRequestObjectResult>();
         result3.Should().BeOfType<BadRequestObjectResult>();
 
-        _serviceMock.Verify(
-        _documentServiceMock.Verify(s => s.ListAsync(It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
-            Times.Never);
+        _documentServiceMock.Verify(
+            s => s.ListAsync(It.IsAny<Guid>(), It.IsAny<string?>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -117,7 +117,7 @@ public class DocumentsControllerTests
         ok.StatusCode.Should().Be(StatusCodes.Status200OK);
         ok.Value.Should().BeEquivalentTo(dto);
 
-        _serviceMock.Verify(s => s.GetAsync(TestUserId, id, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.GetAsync(TestUserId, id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -160,7 +160,7 @@ public class DocumentsControllerTests
         fileResult.ContentType.Should().Be("application/pdf");
         fileResult.FileDownloadName.Should().Be($"{id}.pdf");
 
-        _documentServiceMock.Verify(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.DownloadAsync(TestUserId, id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -180,7 +180,7 @@ public class DocumentsControllerTests
         result.Should().BeOfType<NotFoundResult>();
         ((NotFoundResult)result!).StatusCode.Should().Be(StatusCodes.Status404NotFound);
 
-        _documentServiceMock.Verify(s => s.DownloadAsync(id, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.DownloadAsync(TestUserId, id, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -204,7 +204,7 @@ public class DocumentsControllerTests
         createdAt.ActionName.Should().Be(nameof(DocumentsController.Get));
         createdAt.Value.Should().BeEquivalentTo(created);
 
-        _documentServiceMock.Verify(s => s.CreateAsync(createDto, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.CreateAsync(TestUserId, createDto, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     // Note: 400 responses for Create are produced by the framework's automatic model validation (ApiController).
@@ -262,7 +262,7 @@ public class DocumentsControllerTests
         result.Should().BeOfType<NoContentResult>();
         ((NoContentResult)result).StatusCode.Should().Be(StatusCodes.Status204NoContent);
 
-        _documentServiceMock.Verify(s => s.UpdateAsync(dto, It.IsAny<CancellationToken>()), Times.Once);
+        _documentServiceMock.Verify(s => s.UpdateAsync(TestUserId, dto, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

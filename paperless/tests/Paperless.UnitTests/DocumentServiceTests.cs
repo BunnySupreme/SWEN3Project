@@ -69,7 +69,7 @@ public class DocumentServiceTests
             _mapperMock.Object,
             _createValidatorMock.Object,
             _updateValidatorMock.Object,
-            _rabbitProducerMock.Object);
+            _rabbitProducerMock.Object,
             _elasticServiceMock.Object);
     }
 
