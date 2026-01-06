@@ -6,41 +6,46 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Paperless.Api;
 using Paperless.Api.Controllers;
+using Paperless.DAL.Models;
 using Paperless.Services;
 
 namespace Paperless.UnitTests;
 
 public class DocumentsControllerTests
 {
+    private const string TestToken = "test-token";
     private static readonly Guid TestUserId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
     private readonly Mock<IDocumentService> _serviceMock;
+    private readonly Mock<IAuthService> _authMock;
     private readonly DocumentsController _controller;
+
 
     public DocumentsControllerTests()
     {
         _serviceMock = new Mock<IDocumentService>();
-        _controller = new DocumentsController(_serviceMock.Object);
+        _authMock = new Mock<IAuthService>();
 
-        SetUser(_controller, TestUserId);
+        _controller = new DocumentsController(_serviceMock.Object, _authMock.Object);
+
+        SetBearer(_controller, TestToken);
+
+        _authMock
+            .Setup(a => a.ValidateTokenAsync(TestToken, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new UserModel { Id = TestUserId }); 
     }
 
-    private static void SetUser(ControllerBase controller, Guid userId)
+    private static void SetBearer(ControllerBase controller, string token)
     {
-        var identity = new ClaimsIdentity(new[]
-        {
-            new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
-            new Claim("sub", userId.ToString()),
-        }, authenticationType: "TestAuth");
+        var http = new DefaultHttpContext();
+        http.Request.Headers.Authorization = $"Bearer {token}";
 
         controller.ControllerContext = new ControllerContext
         {
-            HttpContext = new DefaultHttpContext
-            {
-                User = new ClaimsPrincipal(identity)
-            }
+            HttpContext = http
         };
     }
+
 
     [Fact]
     public async Task List_ShouldReturn200AndDocs()

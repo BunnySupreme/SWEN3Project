@@ -15,7 +15,11 @@ public class DocumentsController : ControllerBase
     private readonly IDocumentService _svc;
     private readonly IAuthService _auth;
 
-    public DocumentsController(IDocumentService svc) => _svc = svc;
+    public DocumentsController(IDocumentService svc, IAuthService auth)
+    {
+        _svc = svc;
+        _auth = auth;
+    }
 
     // ─────────────────────────────────────────────
     // LIST
