@@ -23,8 +23,6 @@ public sealed class AuthService : IAuthService
     public async Task RegisterAsync(RegisterRequest req, CancellationToken ct)
     {
         var username = (req.Username ?? string.Empty).Trim();
-        if (username.Length < 3) throw new ArgumentException("Username too short.");
-        if ((req.Password ?? string.Empty).Length < 6) throw new ArgumentException("Password too short.");
 
         if (await _users.UsernameExistsAsync(username, ct))
             throw new InvalidOperationException("Username already exists.");
@@ -47,7 +45,7 @@ public sealed class AuthService : IAuthService
             throw new InvalidOperationException("Invalid credentials.");
 
         var token = CreateToken();
-        var expires = DateTimeOffset.UtcNow.AddDays(7);
+        var expires = DateTimeOffset.UtcNow.AddDays(1);
 
         var session = new SessionModel
         {

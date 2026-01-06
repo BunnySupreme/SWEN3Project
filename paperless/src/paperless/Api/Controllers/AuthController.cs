@@ -12,14 +12,31 @@ public class AuthController : ControllerBase
     [AllowAnonymous]
     public async Task<IActionResult> Register([FromBody] RegisterRequest req, CancellationToken ct)
     {
-        await _auth.RegisterAsync(req, ct);
-        return NoContent();
+        try
+        {
+            await _auth.RegisterAsync(req, ct);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     [HttpPost("login")]
-    [AllowAnonymous]
+
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
-        => Ok(await _auth.LoginAsync(req, ct));
+    {
+        try
+        {
+            return Ok(await _auth.LoginAsync(req, ct));
+        }
+        catch(InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+        
 
     [HttpPost("logout")]
     public async Task<IActionResult> Logout(CancellationToken ct)
