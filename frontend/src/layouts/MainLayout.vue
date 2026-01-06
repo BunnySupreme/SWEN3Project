@@ -24,7 +24,7 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
-import { logout } from 'src/services/authApi.ts'
+import { logout } from 'src/services/authApi'
 
 const router = useRouter()
 
