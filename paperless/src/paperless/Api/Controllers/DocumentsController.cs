@@ -85,12 +85,14 @@ public class DocumentsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> Search([FromBody] string searchTerm, CancellationToken ct = default)
     {
-        if(string.IsNullOrWhiteSpace(searchTerm))
+        var userId = await GetUserIdOrNull(ct);
+        if (userId is null) return Unauthorized();
+        if (string.IsNullOrWhiteSpace(searchTerm))
         {
             return BadRequest(new { message = "Search term cannot be empty" });
         }
 
-        var results = await _elasticSvc.SearchAsync(searchTerm, ct);
+        var results = await _elasticSvc.SearchAsync(userId.ToString()!, searchTerm, ct);
 
         return Ok(results);
     }
