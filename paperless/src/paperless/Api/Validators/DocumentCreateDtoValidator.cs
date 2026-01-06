@@ -19,10 +19,6 @@ namespace paperless.Api.Validators
                 .NotEmpty().WithMessage("Title is required")
                 .MaximumLength(255).WithMessage("Title must not exceed 255 characters");
 
-            // Commented out until automatic summary generation is implemented
-            //RuleFor(x => x.Summary)
-            //    .NotEmpty().WithMessage("Summary is required");
-
             When(x => x.Tags != null && x.Tags.Count > 0, () =>
             {
                 RuleFor(x => x.Tags)

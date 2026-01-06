@@ -83,7 +83,7 @@ services:
       - xpack.security.enabled=false
       - discovery.type=single-node
     volumes:
-      - elastic_data:/data
+      - elastic_data:/usr/share/elasticsearch/data
     networks:
       - paperless-network
     restart: unless-stopped

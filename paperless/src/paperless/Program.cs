@@ -11,6 +11,7 @@ using Paperless.DAL;
 using Paperless.DAL.Repositories;
 using Paperless.Services;
 using System.Text.Json;
+using Elastic.Clients.Elasticsearch;
 
 // ------------------------------------------------------------
 // CONFIGURE LOG4NET & CREATE LOGGER
@@ -34,7 +35,7 @@ builder.Services.AddAutoMapper(cfg =>
     cfg.AddProfile<MappingProfile>();
 }, typeof(Program).Assembly);
 
-// Controller
+// Controllers
 builder.Services.AddControllers()
     .AddJsonOptions(o => o.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase);
 
@@ -85,6 +86,10 @@ builder.Services.AddDbContext<DataContext>(options =>
 {
     options.UseNpgsql(Configuration.PostgresConnectionString);
 });
+
+// Elastic Search
+builder.Services.AddSingleton(new ElasticsearchClient(new Uri("http://paperless-elastic:9200")));
+builder.Services.AddScoped<IElasticService, ElasticService>();
 
 // RabbitMQ Services
 string rabbitHost = Environment.GetEnvironmentVariable("RABBITMQ_HOST") ?? "paperless-rabbitmq";

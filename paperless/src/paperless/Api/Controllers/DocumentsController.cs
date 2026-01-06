@@ -12,13 +12,15 @@ public class DocumentsController : ControllerBase
 {
     private const int DefaultTake = 50;
     private const int MaxTake = 100;
-    private readonly IDocumentService _svc;
-    private readonly IAuthService _auth;
+    private readonly IDocumentService _documentSvc;
+    private readonly IElasticService _elasticSvc;
+	private readonly IAuthService _auth;
 
-    public DocumentsController(IDocumentService svc, IAuthService auth)
+    public DocumentsController(IDocumentService DocumentSvc, IElasticService elasticSvc, IAuthService auth)
     {
-        _svc = svc;
-        _auth = auth;
+        _documentSvc = DocumentSvc;
+        _elasticSvc = elasticSvc;
+		_auth = auth;
     }
 
     // ─────────────────────────────────────────────
@@ -38,8 +40,7 @@ public class DocumentsController : ControllerBase
 
         var userId = await GetUserIdOrNull(ct);
         if (userId is null) return Unauthorized();
-        var docs = await _svc.ListAsync(userId.Value, title, skip, take, ct);
-
+        var docs = await _documentSvc.ListAsync(userId.Value, title, skip, take, ct);
         return Ok(docs);
     }
 
@@ -53,7 +54,7 @@ public class DocumentsController : ControllerBase
     {
         var userId = await GetUserIdOrNull(ct);
         if (userId is null) return Unauthorized();
-        var doc = await _svc.GetAsync(userId.Value, id, ct);
+        var doc = await _documentSvc.GetAsync(userId.Value, id, ct);
         return doc is null ? NotFound() : Ok(doc);
     }
 
@@ -67,13 +68,31 @@ public class DocumentsController : ControllerBase
     {
         var userId = await GetUserIdOrNull(ct);
         if (userId is null) return Unauthorized();
-        var memoryStream = await _svc.DownloadAsync(userId.Value, id, ct);
+        var memoryStream = await _documentSvc.DownloadAsync(userId.Value, id, ct);
         if (memoryStream is null)
             return NotFound();
 
         var fileName = $"{id}.pdf";
 
         return File(memoryStream, "application/pdf", fileName);
+    }
+
+    // ─────────────────────────────────────────────
+    // SEARCH
+    // ─────────────────────────────────────────────
+    [HttpPost("search")] // POST to allow complex search criteria in body and avoid URL length limits
+    [ProducesResponseType(typeof(IEnumerable<DocumentReadDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> Search([FromBody] string searchTerm, CancellationToken ct = default)
+    {
+        if(string.IsNullOrWhiteSpace(searchTerm))
+        {
+            return BadRequest(new { message = "Search term cannot be empty" });
+        }
+
+        var results = await _elasticSvc.SearchAsync(searchTerm, ct);
+
+        return Ok(results);
     }
 
     // ─────────────────────────────────────────────
@@ -88,7 +107,7 @@ public class DocumentsController : ControllerBase
     {
         var userId = await GetUserIdOrNull(ct);
         if (userId is null) return Unauthorized();
-        var created = await _svc.CreateAsync(userId.Value, dto, ct);
+        var created = await _documentSvc.CreateAsync(userId.Value, dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
@@ -139,7 +158,7 @@ public class DocumentsController : ControllerBase
 
         var userId = await GetUserIdOrNull(ct);
         if (userId is null) return Unauthorized();
-        var created = await _svc.UploadAsync(userId.Value, file, dto, ct);
+        var created = await _documentSvc.UploadAsync(userId.Value, file, dto, ct);
         return CreatedAtAction(nameof(Get), new { id = created.Id }, created);
     }
 
@@ -159,7 +178,7 @@ public class DocumentsController : ControllerBase
 
         var userId = await GetUserIdOrNull(ct);
         if (userId is null) return Unauthorized();
-        var ok = await _svc.UpdateAsync(userId.Value, dto, ct);
+        var ok = await _documentSvc.UpdateAsync(userId.Value, dto, ct);
         return ok ? NoContent() : NotFound();
     }
 
@@ -173,7 +192,7 @@ public class DocumentsController : ControllerBase
     {
         var userId = await GetUserIdOrNull(ct);
         if (userId is null) return Unauthorized();
-        var ok = await _svc.DeleteAsync(userId.Value, id, ct);
+        var ok = await _documentSvc.DeleteAsync(userId.Value, id, ct);
         return ok ? NoContent() : NotFound();
     }
 

@@ -184,6 +184,7 @@ namespace Paperless.OcrWorker
                     var resultPayload = new
                     {
                         DocumentId = resultDocId == Guid.Empty ? Guid.NewGuid() : resultDocId,
+                        OcrText = docText,
                         Summary = summary,
                         ProcessedAt = DateTimeOffset.UtcNow
                     };

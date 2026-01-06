@@ -19,7 +19,7 @@ namespace Paperless.UnitTests
         private readonly Mock<IValidator<DocumentCreateDto>> _createValidatorMock = new();
         private readonly Mock<IValidator<DocumentUpdateDto>> _updateValidatorMock = new();
         private readonly Mock<IRabbitProducerService> _rabbitProducerMock = new();
-
+        private readonly Mock<IElasticService> _elasticServiceMock;
         private readonly DocumentService _service;
 
         private readonly Guid _userId = Guid.NewGuid();
@@ -55,13 +55,15 @@ namespace Paperless.UnitTests
                     UploadedAt = DateTimeOffset.UtcNow
                 });
 
+            _elasticServiceMock = new Mock<IElasticService>();
             _service = new DocumentService(
                 _repoMock.Object,
                 _db,
                 _mapperMock.Object,
                 _createValidatorMock.Object,
                 _updateValidatorMock.Object,
-                _rabbitProducerMock.Object);
+                _rabbitProducerMock.Object,
+                _elasticServiceMock.Object);
         }
 
         [Fact]
