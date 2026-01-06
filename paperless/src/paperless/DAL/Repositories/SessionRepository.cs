@@ -22,6 +22,7 @@ public sealed class SessionRepository : ISessionRepository
         var s = await _db.Sessions.FirstOrDefaultAsync(x => x.Token == token, ct);
         if (s is null) return false;
         s.RevokedAt = revokedAtUtc;
+        _db.Sessions.Remove(s);
         return true;
     }
 }

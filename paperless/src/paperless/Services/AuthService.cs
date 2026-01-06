@@ -68,7 +68,12 @@ public sealed class AuthService : IAuthService
         var s = await _sessions.ReadByTokenAsync(token, ct);
         if (s is null) return null;
         if (s.RevokedAt is not null) return null;
-        if (s.ExpiresAt <= DateTimeOffset.UtcNow) return null;
+        if (s.ExpiresAt <= DateTimeOffset.UtcNow)
+        {
+            await _sessions.RevokeAsync(token, DateTimeOffset.UtcNow, ct);
+            return null;
+        }
+            
 
         return await _users.ReadByIdAsync(s.UserId, ct);
     }

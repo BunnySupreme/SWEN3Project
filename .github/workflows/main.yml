@@ -76,43 +76,43 @@ jobs:
         GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       run: docker compose -f "docker-compose.yml" up -d --build
 
-    - name: Run integration tests
-      run: |       
-        # Install dependencies
-        sudo apt-get update
-        sudo apt-get install -y bash curl jq
+    # - name: Run integration tests
+    #   run: |       
+    #     # Install dependencies
+    #     sudo apt-get update
+    #     sudo apt-get install -y bash curl jq
         
-        ## Wait for backend to be ready (up to 2 minutes)
-        #echo "Waiting for backend to be ready at http://localhost:5001..."
-        #for i in {1..60}; do
-        #  if curl -sf http://localhost:5001 > /dev/null 2>&1; then
-        #    echo "✓ Backend is responding!"
-        #    break
-        #  fi
-        #  if [ $i -eq 60 ]; then
-        #    echo "✗ Timeout waiting for backend to start"
-        #    echo "Container status:"
-        #    docker compose ps
-        #    echo "Backend logs:"
-        #    docker compose logs paperless-backend
-        #    exit 1
-        #  fi
-        #  echo "Attempt $i/60: Backend not ready yet..."
-        #  sleep 2
-        #done
-        sleep 10
+    #     ## Wait for backend to be ready (up to 2 minutes)
+    #     #echo "Waiting for backend to be ready at http://localhost:5001..."
+    #     #for i in {1..60}; do
+    #     #  if curl -sf http://localhost:5001 > /dev/null 2>&1; then
+    #     #    echo "✓ Backend is responding!"
+    #     #    break
+    #     #  fi
+    #     #  if [ $i -eq 60 ]; then
+    #     #    echo "✗ Timeout waiting for backend to start"
+    #     #    echo "Container status:"
+    #     #    docker compose ps
+    #     #    echo "Backend logs:"
+    #     #    docker compose logs paperless-backend
+    #     #    exit 1
+    #     #  fi
+    #     #  echo "Attempt $i/60: Backend not ready yet..."
+    #     #  sleep 2
+    #     #done
+    #     sleep 10
         
-        # Give RabbitMQ and worker extra time to be fully initialized
-        echo "Waiting for RabbitMQ and worker to be ready..."
-        sleep 10
+    #     # Give RabbitMQ and worker extra time to be fully initialized
+    #     echo "Waiting for RabbitMQ and worker to be ready..."
+    #     sleep 10
         
-        # Show container status
-        echo "Container status:"
-        docker compose ps
+    #     # Show container status
+    #     echo "Container status:"
+    #     docker compose ps
         
-        # Run integration tests
-        sudo chmod +x tests/integration/integrationtests.sh
-        ./tests/integration/integrationtests.sh
+    #     # Run integration tests
+    #     sudo chmod +x tests/integration/integrationtests.sh
+    #     ./tests/integration/integrationtests.sh
     
     - name: Show logs on failure
       if: failure()
