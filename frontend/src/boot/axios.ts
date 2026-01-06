@@ -1,4 +1,4 @@
-﻿import axios, { AxiosError } from 'axios'
+﻿import axios from 'axios'
 import { boot } from 'quasar/wrappers'
 import { clearToken } from 'src/services/authToken'
 
