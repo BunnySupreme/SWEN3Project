@@ -1,6 +1,19 @@
-import type { RouteRecordRaw } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router'
 
 const routes: RouteRecordRaw[] = [
+  {
+    path: '/login',
+    name: 'login',
+    component: () => import('pages/LoginPage.vue'),
+    meta: { public: true }
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('pages/RegisterPage.vue'),
+    meta: { public: true }
+  },
+
   {
     path: '/',
     component: () => import('layouts/MainLayout.vue'),
@@ -10,7 +23,8 @@ const routes: RouteRecordRaw[] = [
       { path: 'upload', name: 'upload', component: () => import('pages/UploadPage.vue') }
     ]
   },
-  { path: '/:catchAll(.*)*', component: () => import('pages/ErrorNotFound.vue') }
-];
 
-export default routes;
+  { path: '/:catchAll(.*)*', component: () => import('pages/ErrorNotFound.vue') }
+]
+
+export default routes
