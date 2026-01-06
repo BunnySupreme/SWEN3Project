@@ -1,25 +1,23 @@
 ﻿import axios from 'axios'
 import { boot } from 'quasar/wrappers'
-import { clearToken } from 'src/services/authToken'
+import { getToken, clearToken } from 'src/services/authToken'
 
 export const api = axios.create({
   baseURL: '/api',
 })
 
-api.interceptors.response.use(
-  (r) => r,
-  (err: unknown) => {
-    // clear token on 401 if this is an axios error with a response
-    if (axios.isAxiosError(err) && err.response?.status === 401) {
-      clearToken()
-    }
+api.interceptors.request.use((config) => {
+  const token = getToken()
 
-    if (err instanceof Error) {
-      return Promise.reject(err)
-    }
-
-    return Promise.reject(new Error('Request failed'))
+  if (token) {
+    config.headers = config.headers ?? {}
+    config.headers.Authorization = `Bearer ${token}`
   }
-)
+
+  // TEMP DEBUG:
+  console.log('REQ', config.method, config.url, 'auth?', !!token)
+
+  return config
+})
 
 export default boot(() => {})
