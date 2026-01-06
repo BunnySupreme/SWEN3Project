@@ -16,7 +16,7 @@ export type AuthResponse = {
 }
 
 export async function register(req: RegisterRequest) {
-  await api.post('/auth/register', req) // baseURL '/api' => /api/auth/register
+  await api.post('/auth/register', req)
 }
 
 export async function login(req: { username: string; password: string }) {

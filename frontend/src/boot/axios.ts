@@ -1,6 +1,6 @@
 ﻿import axios from 'axios'
 import { boot } from 'quasar/wrappers'
-import { getToken, clearToken } from 'src/services/authToken'
+import { getToken } from 'src/services/authToken'
 
 export const api = axios.create({
   baseURL: '/api',
