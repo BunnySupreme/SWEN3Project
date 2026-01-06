@@ -45,7 +45,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { login } from 'src/services/authApi' // adjust import path
+import { login } from 'src/services/authApi'
 
 const router = useRouter()
 const route = useRoute()
@@ -54,6 +54,7 @@ const username = ref('')
 const password = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
+import { getHttpErrorMessage } from 'src/utils/httpError'
 
 async function onSubmit() {
   loading.value = true
@@ -63,8 +64,8 @@ async function onSubmit() {
 
     const next = (route.query.next as string) || '/'
     await router.replace(next)
-  } catch (e: any) {
-    error.value = e?.response?.data?.error ?? 'Login failed'
+  } catch (e: unknown) {
+    error.value = getHttpErrorMessage(e)
   } finally {
     loading.value = false
   }

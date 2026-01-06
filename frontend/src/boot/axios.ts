@@ -1,29 +1,24 @@
-﻿import { boot } from 'quasar/wrappers'
-import axios from 'axios'
-import { getToken, clearToken } from 'src/services/authToken'
+﻿import axios, { AxiosError } from 'axios'
+import { boot } from 'quasar/wrappers'
+import { clearToken } from 'src/services/authToken'
 
 export const api = axios.create({
-  baseURL: '/api' // nginx proxy
+  baseURL: '/api',
 })
 
-// Attach Authorization header to every request if token exists
-api.interceptors.request.use((config) => {
-  const token = getToken()
-  if (token) {
-    config.headers = config.headers ?? {}
-    config.headers.Authorization = `Bearer ${token}`
-  }
-  return config
-})
-
-//if backend returns 401, clear token (prevents infinite broken state)
 api.interceptors.response.use(
   (r) => r,
-  (err) => {
-    if (err?.response?.status === 401) {
+  (err: unknown) => {
+    // clear token on 401 if this is an axios error with a response
+    if (axios.isAxiosError(err) && err.response?.status === 401) {
       clearToken()
     }
-    return Promise.reject(err)
+
+    if (err instanceof Error) {
+      return Promise.reject(err)
+    }
+
+    return Promise.reject(new Error('Request failed'))
   }
 )
 

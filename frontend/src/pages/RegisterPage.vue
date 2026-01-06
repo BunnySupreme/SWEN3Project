@@ -17,7 +17,7 @@
           label="Password"
           type="password"
           autocomplete="new-password"
-          :rules="[v => (v?.length ?? 0) >= 6 || 'Min 6 characters']"
+          :rules="[v => (v?.length ?? 0) >= 8 || 'Min 8 characters']"
           outlined
         />
 
@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { register } from 'src/services/authApi' // adjust import path
+import { register } from 'src/services/authApi'
 
 const router = useRouter()
 
@@ -63,6 +63,7 @@ const password = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
+import { getHttpErrorMessage } from 'src/utils/httpError'
 
 async function onSubmit() {
   loading.value = true
@@ -70,8 +71,8 @@ async function onSubmit() {
   try {
     await register({ username: username.value, password: password.value })
     await router.replace({ name: 'login' })
-  } catch (e: any) {
-    error.value = e?.response?.data?.error ?? 'Registration failed'
+  } catch (e: unknown) {
+    error.value = getHttpErrorMessage(e)
   } finally {
     loading.value = false
   }
