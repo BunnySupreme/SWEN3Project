@@ -33,3 +33,8 @@ export async function uploadDocument(file: File, title: string, tagsCsv: string)
   const { data } = await api.post('/documents/upload', form); // baseURL '/api'
   return data;
 }
+
+export async function search(searchTerm: string) {
+  const { data } = await api.post('/documents/search', { SearchTerm: searchTerm })
+  return data
+}

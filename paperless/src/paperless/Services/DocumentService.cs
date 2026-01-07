@@ -226,7 +226,7 @@ public sealed class DocumentService : IDocumentService
             Summary = entity.Summary,
             Tags = entity.Tags,
             UploadedAt = entity.UploadedAt,
-            UserId = userId.ToString(),
+            UserId = userId.ToString()
         };
 
         await _elasticService.UpdateIndexAsync(searchDocument, ct);

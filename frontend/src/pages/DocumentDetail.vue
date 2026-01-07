@@ -1,6 +1,6 @@
 ﻿<template>
   <q-page class="q-pa-md">
-    <q-breadcrumbs class="q-mb-md">
+    <q-breadcrumbs class="q-mb-md bg-white q-pa-sm rounded-borders shadow-1">
       <q-breadcrumbs-el label="Documents" :to="{ name: 'home' }" />
       <q-breadcrumbs-el :label="doc?.title || 'Loading…'" />
     </q-breadcrumbs>

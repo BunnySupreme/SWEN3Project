@@ -29,16 +29,16 @@ namespace Paperless.Services
         // ─────────────────────────────────────────────
         public async Task<IReadOnlyList<DocumentReadDto>> SearchAsync(string userId, string searchTerm, CancellationToken ct)
         {
-            _logger.Info($"Searching for documents matching searchTerm: {searchTerm}");
+            _logger.Info($"Searching for documents matching searchTerm: '{searchTerm}' for user with ID: '{userId}'");
 
             var searchResponse = await _elasticClient.SearchAsync<DocumentSearchModel>(s => s
                     .Indices("documents")
                     .Query(q => q
                         .Bool(b => b
                             .Filter(f => f
-                                .Term(t => t
+                                .Match(ma => ma
                                     .Field(d => d.UserId)
-                                    .Value(userId)
+                                    .Query(userId)
                                 )
                             )
                             .Must(m => m

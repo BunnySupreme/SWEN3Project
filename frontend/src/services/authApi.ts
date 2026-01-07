@@ -29,6 +29,7 @@ export async function login(req: { username: string; password: string }) {
   setToken(data.token)
   return data
 }
+
 export async function logout() {
   await api.post('/auth/logout')
   clearToken()

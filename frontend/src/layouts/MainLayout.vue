@@ -6,6 +6,16 @@
 
         <q-space />
 
+        <q-input standout v-model="text" label="Search" />
+        <q-btn
+          flat
+          dense
+          icon="search"
+          label="Search"
+          @click="onSearch" />
+
+        <q-space />
+
         <q-btn
           flat
           dense
@@ -24,9 +34,19 @@
 
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
+import { ref } from 'vue'
 import { logout } from 'src/services/authApi'
 
 const router = useRouter()
+const text = ref('')
+
+function onSearch() {
+  try {
+    void router.push({ name: 'searchResults', query: { text: text.value } })
+  } catch (error) {
+    console.error('Search failed:', error)
+  }
+}
 
 async function onLogout() {
   try {

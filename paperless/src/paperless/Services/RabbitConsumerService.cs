@@ -172,7 +172,8 @@ namespace Paperless.Services
                     OcrText = result.OcrText,
                     Summary = result.Summary,
                     Tags = document.Tags,
-                    UploadedAt = document.UploadedAt
+                    UploadedAt = document.UploadedAt,
+                    UserId = document.UserId.ToString()
                 };
 
                 using var scopeElastic = _serviceProvider.CreateScope();
