@@ -1,5 +1,10 @@
 ﻿<template>
   <q-page class="q-pa-md">
+    <q-breadcrumbs class="q-mb-md bg-white q-pa-sm rounded-borders shadow-1">
+      <q-breadcrumbs-el label="Documents" :to="{ name: 'home' }" />
+      <q-breadcrumbs-el :label="'Upload'" />
+    </q-breadcrumbs>
+
     <div class="text-h5 q-mb-md">Upload Document</div>
 
     <q-form ref="form" @submit.prevent="onSubmit">

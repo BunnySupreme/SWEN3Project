@@ -80,20 +80,24 @@ public class DocumentsController : ControllerBase
     // ─────────────────────────────────────────────
     // SEARCH
     // ─────────────────────────────────────────────
-    [HttpPost("search")] // POST to allow complex search criteria in body and avoid URL length limits
+    public class SearchRequest
+    {
+        public string SearchTerm { get; set; } = string.Empty;
+    }
+
+    [HttpPost("search")]
     [ProducesResponseType(typeof(IEnumerable<DocumentReadDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    public async Task<IActionResult> Search([FromBody] string searchTerm, CancellationToken ct = default)
+    public async Task<IActionResult> Search([FromBody] SearchRequest request, CancellationToken ct = default)
     {
         var userId = await GetUserIdOrNull(ct);
         if (userId is null) return Unauthorized();
-        if (string.IsNullOrWhiteSpace(searchTerm))
+        if (string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             return BadRequest(new { message = "Search term cannot be empty" });
         }
 
-        var results = await _elasticSvc.SearchAsync(userId.ToString()!, searchTerm, ct);
-
+        var results = await _elasticSvc.SearchAsync(userId.ToString()!, request.SearchTerm, ct);
         return Ok(results);
     }
 
