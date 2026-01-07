@@ -32,17 +32,27 @@ namespace Paperless.DAL.Repositories
             }
         }
 
-        public Task<List<DocumentModel>> ReadAllAsync(CancellationToken ct = default) =>
-        _db.Documents.AsNoTracking().ToListAsync(ct);
+        public Task<DocumentModel?> ReadByIdAndUserIdAsync(Guid id, Guid userId, CancellationToken ct = default) =>
+        _db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId, ct);
 
         public Task<DocumentModel?> ReadByIdAsync(Guid id, CancellationToken ct = default) =>
         _db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id, ct);
 
-        public Task<List<DocumentModel>> ReadByTitleAsync(string title, CancellationToken ct = default) =>
-        _db.Documents
-           .AsNoTracking()
-           .Where(d => EF.Functions.Like(d.Title, $"%{title}%"))
-           .ToListAsync(ct);
+        public Task<List<DocumentModel>> ReadListAsync(Guid userId, string? title, int skip, int take, CancellationToken ct = default)
+        {
+            IQueryable<DocumentModel> q = _db.Documents.AsNoTracking().Where(d => d.UserId == userId);
+
+            if (!string.IsNullOrWhiteSpace(title))
+            {
+                q = q.Where(d => EF.Functions.ILike(d.Title, $"%{title}%"));
+            }
+
+            return q.OrderByDescending(d => d.UploadedAt)
+                    .ThenByDescending(d => d.Title)
+                    .Skip(skip)
+                    .Take(take)
+                    .ToListAsync(ct);
+        }
 
         public Task<int> DeleteAllAsync(CancellationToken ct = default) =>
         _db.Documents.ExecuteDeleteAsync(ct);
@@ -55,6 +65,12 @@ namespace Paperless.DAL.Repositories
             if (deleted > 0) return true;
             return false;
         }
+
+        public async Task<bool> ExistsForUserAsync(Guid id, Guid userId, CancellationToken ct = default) =>
+        await _db.Documents.AsNoTracking().AnyAsync(d => d.Id == id && d.UserId == userId, ct);
+
+        public Task<List<DocumentModel>> ReadAllAsync(CancellationToken ct = default) =>
+        _db.Documents.AsNoTracking().ToListAsync(ct);
         #endregion
     }
 }

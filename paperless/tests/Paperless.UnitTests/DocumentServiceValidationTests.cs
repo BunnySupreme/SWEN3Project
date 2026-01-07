@@ -8,20 +8,22 @@ using Paperless.DAL;
 using Paperless.DAL.Models;
 using Paperless.DAL.Repositories;
 using Paperless.Services;
-using Microsoft.AspNetCore.Http;
 
 namespace Paperless.UnitTests
 {
     public class DocumentServiceValidationTests
     {
-        private readonly Mock<IDocumentRepository> _repoMock;
-        private readonly Mock<DataContext> _dbMock;
-        private readonly Mock<IMapper> _mapperMock;
-        private readonly Mock<IValidator<DocumentCreateDto>> _createValidatorMock;
-        private readonly Mock<IValidator<DocumentUpdateDto>> _updateValidatorMock;
-        private readonly Mock<IRabbitProducerService> _rabbitProducerMock;
+        private readonly Mock<IDocumentRepository> _repoMock = new();
+        private readonly DataContext _db;
+        private readonly Mock<IMapper> _mapperMock = new();
+        private readonly Mock<IValidator<DocumentCreateDto>> _createValidatorMock = new();
+        private readonly Mock<IValidator<DocumentUpdateDto>> _updateValidatorMock = new();
+        private readonly Mock<IRabbitProducerService> _rabbitProducerMock = new();
         private readonly Mock<IElasticService> _elasticServiceMock;
         private readonly DocumentService _service;
+
+        private readonly Guid _userId = Guid.NewGuid();
+        private readonly Guid _otherUserId = Guid.NewGuid();
 
         public DocumentServiceValidationTests()
         {
@@ -29,14 +31,8 @@ namespace Paperless.UnitTests
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options;
 
-            _dbMock = new Mock<DataContext>(options) { CallBase = true };
-            _dbMock
-                .Setup(db => db.SaveChangesAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(1);
+            _db = new DataContext(options);
 
-            _repoMock = new Mock<IDocumentRepository>();
-
-            _mapperMock = new Mock<IMapper>();
             _mapperMock
                 .Setup(m => m.Map<DocumentReadDto>(It.IsAny<DocumentModel>()))
                 .Returns((DocumentModel d) => new DocumentReadDto(
@@ -48,93 +44,100 @@ namespace Paperless.UnitTests
                         : d.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
                     UploadedAt: d.UploadedAt
                 ));
+
             _mapperMock
                 .Setup(m => m.Map<DocumentModel>(It.IsAny<DocumentCreateDto>()))
-                .Returns((DocumentCreateDto dto) =>
+                .Returns((DocumentCreateDto dto) => new DocumentModel
                 {
-                    var model = new DocumentModel();
-                    model.Update(dto.Title, dto.Summary, dto.Tags is null ? string.Empty : string.Join(',', dto.Tags));
-                    return model;
+                    Title = dto.Title,
+                    Summary = dto.Summary ?? string.Empty,
+                    Tags = dto.Tags is null ? string.Empty : string.Join(',', dto.Tags),
+                    UploadedAt = DateTimeOffset.UtcNow
                 });
 
-            _createValidatorMock = new Mock<IValidator<DocumentCreateDto>>();
-            _updateValidatorMock = new Mock<IValidator<DocumentUpdateDto>>();
-
-            _rabbitProducerMock = new Mock<IRabbitProducerService>();
             _elasticServiceMock = new Mock<IElasticService>();
-
             _service = new DocumentService(
-                _repoMock.Object, 
-                _dbMock.Object, 
-                _mapperMock.Object, 
-                _createValidatorMock.Object, 
+                _repoMock.Object,
+                _db,
+                _mapperMock.Object,
+                _createValidatorMock.Object,
                 _updateValidatorMock.Object,
                 _rabbitProducerMock.Object,
                 _elasticServiceMock.Object);
         }
 
         [Fact]
-        public async Task ListAsync_Valid_ReturnsMappedDtos()
+        public async Task ListAsync_Valid_CallsRepoWithUserId_AndMapsResults()
         {
             // Arrange
-            var docs = new List<DocumentModel>
+            var docsForUser = new List<DocumentModel>
             {
-                new DocumentModel(), // older
-                new DocumentModel()  // newer
+                new DocumentModel { Id = Guid.NewGuid(), Title = "Mine A", Summary = "s", Tags = "tag1", UploadedAt = DateTimeOffset.UtcNow, UserId = _userId },
+                new DocumentModel { Id = Guid.NewGuid(), Title = "Mine B", Summary = "s", Tags = "tag2", UploadedAt = DateTimeOffset.UtcNow.AddMinutes(-1), UserId = _userId }
             };
-            docs[0].Update("File B", "summary", "tag2");
-            docs[1].Update("File A", "summary", "tag1");
 
             _repoMock
-                .Setup(r => r.ReadAllAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(docs);
+                .Setup(r => r.ReadListAsync(_userId, null, 0, 50, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(docsForUser);
 
             // Act
-            var result = await _service.ListAsync(null, 0, 50, CancellationToken.None);
+            var result = await _service.ListAsync(_userId, title: null, skip: 0, take: 50, ct: CancellationToken.None);
 
             // Assert
             Assert.Equal(2, result.Count);
-            Assert.Equal("File A", result[0].Title);
-            Assert.Equal("File B", result[1].Title);
+
+            _repoMock.Verify(r => r.ReadListAsync(_userId, null, 0, 50, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
         public async Task ListAsync_Faulty_DocHasMoreThan10Tags_ReturnsAllTags()
         {
-            // Arrange - repository has a stored document with >10 tags (faulty persisted data)
+            // Arrange
             var manyTags = Enumerable.Range(0, 11).Select(i => $"t{i}").ToArray();
-            var doc = new DocumentModel();
-            doc.Update("ManyTags", "s", string.Join(',', manyTags));
-            var docs = new List<DocumentModel> { doc };
+            var doc = new DocumentModel
+            {
+                Id = Guid.NewGuid(),
+                Title = "ManyTags",
+                Summary = "s",
+                Tags = string.Join(',', manyTags),
+                UploadedAt = DateTimeOffset.UtcNow,
+                UserId = _userId
+            };
 
             _repoMock
-                .Setup(r => r.ReadAllAsync(It.IsAny<CancellationToken>()))
-                .ReturnsAsync(docs);
+                .Setup(r => r.ReadListAsync(_userId, null, 0, 50, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new List<DocumentModel> { doc });
 
             // Act
-            var result = await _service.ListAsync(null, 0, 50, CancellationToken.None);
+            var result = await _service.ListAsync(_userId, title: null, skip: 0, take: 50, ct: CancellationToken.None);
 
             // Assert
             Assert.Single(result);
-            Assert.NotNull(result[0].Tags); // <-- Add this null check
-            Assert.Equal(11, result[0].Tags!.Count); // <-- Use null-forgiving operator
-            Assert.Equal("t0", result[0].Tags![0]);
-            Assert.Equal("t10", result[0].Tags![10]);
+            Assert.Equal(11, result[0].Tags.Count);
+            Assert.Equal("t0", result[0].Tags[0]);
+            Assert.Equal("t10", result[0].Tags[10]);
         }
 
         [Fact]
-        public async Task GetAsync_Valid_ReturnsDto_WhenFound()
+        public async Task GetAsync_Valid_ReturnsDto_WhenFound_AndOwned()
         {
             // Arrange
-            var doc = new DocumentModel();
-            doc.Update("Some File", "s", "t");
+            var doc = new DocumentModel
+            {
+                Id = Guid.NewGuid(),
+                Title = "Some File",
+                Summary = "s",
+                Tags = "t",
+                UploadedAt = DateTimeOffset.UtcNow,
+                UserId = _userId
+            };
 
             _repoMock
-                .Setup(r => r.ReadByIdAsync(doc.Id, It.IsAny<CancellationToken>()))
+                .Setup(r => r.ReadByIdAndUserIdAsync(doc.Id, _userId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(doc);
 
             // Act
-            var result = await _service.GetAsync(doc.Id, CancellationToken.None);
+            var result = await _service.GetAsync(_userId, doc.Id, CancellationToken.None);
 
             // Assert
             Assert.NotNull(result);
@@ -142,58 +145,59 @@ namespace Paperless.UnitTests
         }
 
         [Fact]
-        public async Task GetAsync_Faulty_DocHasMoreThan10Tags_ReturnsDtoWithManyTags()
+        public async Task GetAsync_Faulty_DocHasMoreThan10Tags_ReturnsDtoWithManyTags_WhenOwned()
         {
             // Arrange
             var manyTags = Enumerable.Range(0, 11).Select(i => $"t{i}").ToArray();
-            var doc = new DocumentModel();
-            doc.Update("Some File", "s", string.Join(',', manyTags));
+            var doc = new DocumentModel
+            {
+                Id = Guid.NewGuid(),
+                Title = "Some File",
+                Summary = "s",
+                Tags = string.Join(',', manyTags),
+                UploadedAt = DateTimeOffset.UtcNow,
+                UserId = _userId
+            };
 
             _repoMock
-                .Setup(r => r.ReadByIdAsync(doc.Id, It.IsAny<CancellationToken>()))
+                .Setup(r => r.ReadByIdAndUserIdAsync(doc.Id, _userId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(doc);
 
             // Act
-            var result = await _service.GetAsync(doc.Id, CancellationToken.None);
+            var result = await _service.GetAsync(_userId, doc.Id, CancellationToken.None);
 
             // Assert
             Assert.NotNull(result);
-            Assert.NotNull(result!.Tags);
-            Assert.Equal(11, result.Tags.Count);
+            Assert.Equal(11, result!.Tags.Count);
         }
 
         [Fact]
-        public async Task CreateAsync_Valid_CreatesAndReturnsDto()
+        public async Task CreateAsync_Valid_CreatesAndReturnsDto_WithUserIdSetByService()
         {
             // Arrange
             var createDto = new DocumentCreateDto(
                 Title: "NewFile",
                 Summary: "sum",
-                Tags: new List<string> { "tag1" });
+                Tags: new List<string> { "tag1" }
+            );
 
-            // Ensure validator does not throw by returning a successful ValidationResult
             _createValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<DocumentCreateDto>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ValidationResult());
-            // Also setup the overload that takes the instance directly (ValidateAsync(T, CancellationToken))
-            _createValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
+                .Setup(v => v.ValidateAsync(createDto, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(new ValidationResult());
 
             _repoMock
                 .Setup(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()))
-                .Returns<DocumentModel, CancellationToken>((doc, ct) =>
-                {
-                    doc.UploadedAt = DateTimeOffset.UtcNow;
-                    return Task.CompletedTask;
-                });
+                .Returns(Task.CompletedTask);
 
             // Act
-            var result = await _service.CreateAsync(createDto, CancellationToken.None);
+            var result = await _service.CreateAsync(_userId, createDto, CancellationToken.None);
 
             // Assert
-            _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()), Times.Once);
             Assert.Equal("NewFile", result.Title);
+
+            _repoMock.Verify(r => r.CreateOrUpdateAsync(
+                It.Is<DocumentModel>(m => m.UserId == _userId && m.Title == "NewFile"),
+                It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
@@ -201,166 +205,115 @@ namespace Paperless.UnitTests
         {
             // Arrange
             var tags = Enumerable.Range(0, 11).Select(i => $"t{i}").ToArray();
-            var createDto = new DocumentCreateDto(Title: "Bad", Summary: "S", Tags: tags);
+            var createDto = new DocumentCreateDto(
+                Title: "Bad",
+                Summary: "S",
+                Tags: tags
+            );
 
-            // Make validator return an invalid ValidationResult (so ValidateAndThrowAsync will throw)
-            var invalidResult = new ValidationResult(new[] { new ValidationFailure("Tags", "A maximum of 10 tags are allowed") });
+            var invalidResult = new ValidationResult(new[]
+            {
+                new ValidationFailure("Tags", "A maximum of 10 tags are allowed")
+            });
+
             _createValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<DocumentCreateDto>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(invalidResult);
-            // Also setup the overload that takes the instance directly
-            _createValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
+                .Setup(v => v.ValidateAsync(createDto, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(invalidResult);
 
             // Act & Assert
-            await Assert.ThrowsAsync<ValidationException>(() => _service.CreateAsync(createDto, CancellationToken.None));
+            await Assert.ThrowsAsync<ValidationException>(() => _service.CreateAsync(_userId, createDto, CancellationToken.None));
             _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
-        public async Task UploadAsync_Valid_ReturnsCreatedDto()
+        public async Task UpdateAsync_Valid_ReturnsTrue_WhenDocumentExists_AndOwned()
         {
             // Arrange
-            var content = System.Text.Encoding.UTF8.GetBytes("dummy file content");
-            var stream = new MemoryStream(content);
-            var formFile = new FormFile(stream, 0, stream.Length, "file", "test.txt")
+            var existing = new DocumentModel
             {
-                Headers = new HeaderDictionary(),
-                ContentType = "text/plain"
+                Id = Guid.NewGuid(),
+                Title = "Old",
+                Summary = "s",
+                Tags = "t",
+                UploadedAt = DateTimeOffset.UtcNow,
+                UserId = _userId
             };
-            var dto = new DocumentCreateDto(
-                Title: "test.txt",
-                Summary: string.Empty,
-                Tags: Array.Empty<string>());
-
-            // Ensure validator does not throw
-            _createValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<DocumentCreateDto>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ValidationResult());
-            _createValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ValidationResult());
-
-            _repoMock
-                .Setup(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()))
-                .Returns<DocumentModel, CancellationToken>((doc, ct) =>
-                {
-                    doc.UploadedAt = DateTimeOffset.UtcNow;
-                    return Task.CompletedTask;
-                });
-
-            // Act
-            var result = await _service.UploadAsync(formFile, dto, CancellationToken.None);
-
-            // Assert
-            Assert.Equal("test.txt", result.Title);
-            _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()), Times.Once);
-        }
-
-        [Fact]
-        public async Task UploadAsync_Invalid_ValidatorThrows_ThrowsValidationException_AndDoesNotCallRepo()
-        {
-            // Arrange
-            var content = System.Text.Encoding.UTF8.GetBytes("dummy file content");
-            var stream = new MemoryStream(content);
-            var formFile = new FormFile(stream, 0, stream.Length, "file", "test.txt")
-            {
-                Headers = new HeaderDictionary(),
-                ContentType = "text/plain"
-            };
-            var dto = new DocumentCreateDto(
-                Title: "test.txt",
-                Summary: string.Empty,
-                Tags: Array.Empty<string>());
-
-            // Simulate validator detecting invalid data (e.g. more than 10 tags for created DTO)
-            var invalidResult = new ValidationResult(new[] { new ValidationFailure("Tags", "A maximum of 10 tags are allowed") });
-            _createValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<DocumentCreateDto>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(invalidResult);
-            _createValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(invalidResult);
-
-            // Act & Assert
-            await Assert.ThrowsAsync<ValidationException>(() => _service.UploadAsync(formFile, dto, CancellationToken.None));
-            _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()), Times.Never);
-        }
-
-        [Fact]
-        public async Task UpdateAsync_Valid_ReturnsTrue_WhenDocumentExists()
-        {
-            // Arrange
-            var existing = new DocumentModel();
-            existing.Update("Old", "s", "t");
-
-            _repoMock
-                .Setup(r => r.ReadByIdAsync(existing.Id, It.IsAny<CancellationToken>()))
-                .ReturnsAsync(existing);
-
-            _repoMock
-                .Setup(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()))
-                .Returns(Task.CompletedTask);
-
-            // Ensure validator does not throw
-            _updateValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<DocumentUpdateDto>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ValidationResult());
-            _updateValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<DocumentUpdateDto>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(new ValidationResult());
 
             var dto = new DocumentUpdateDto(
                 Id: existing.Id,
                 Title: "Updated",
                 Summary: "new summary",
-                Tags: new List<string> { "tagX" });
+                Tags: new List<string> { "tagX" }
+            );
+
+            _updateValidatorMock
+                .Setup(v => v.ValidateAsync(dto, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(new ValidationResult());
+
+            _repoMock
+                .Setup(r => r.ReadByIdAndUserIdAsync(existing.Id, _userId, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(existing);
+
+            _repoMock
+                .Setup(r => r.CreateOrUpdateAsync(existing, It.IsAny<CancellationToken>()))
+                .Returns(Task.CompletedTask);
 
             // Act
-            var result = await _service.UpdateAsync(dto, CancellationToken.None);
+            var ok = await _service.UpdateAsync(_userId, dto, CancellationToken.None);
 
             // Assert
-            Assert.True(result);
-            _repoMock.Verify(
-                r => r.CreateOrUpdateAsync(
-                    It.Is<DocumentModel>(d => d.Title == "Updated"),
-                    It.IsAny<CancellationToken>()),
-                Times.Once);
+            Assert.True(ok);
+            Assert.Equal("Updated", existing.Title);
+
+            _repoMock.Verify(r => r.CreateOrUpdateAsync(existing, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
         public async Task UpdateAsync_Invalid_TooManyTags_ThrowsValidationException_AndDoesNotCallRepo()
         {
             // Arrange
-            var id = Guid.NewGuid();
             var tags = Enumerable.Range(0, 11).Select(i => $"t{i}").ToArray();
-            var dto = new DocumentUpdateDto(Id: id, Title: "T", Summary: "S", Tags: tags);
+            var dto = new DocumentUpdateDto(
+                Id: Guid.NewGuid(),
+                Title: "T",
+                Summary: "S",
+                Tags: tags
+            );
 
-            // Make validator return an invalid ValidationResult (so ValidateAndThrowAsync will throw)
-            var invalidUpdateResult = new ValidationResult(new[] { new ValidationFailure("Tags", "A maximum of 10 tags are allowed") });
+            var invalidResult = new ValidationResult(new[]
+            {
+                new ValidationFailure("Tags", "A maximum of 10 tags are allowed")
+            });
+
             _updateValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<ValidationContext<DocumentUpdateDto>>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(invalidUpdateResult);
-            _updateValidatorMock
-                .Setup(v => v.ValidateAsync(It.IsAny<DocumentUpdateDto>(), It.IsAny<CancellationToken>()))
-                .ReturnsAsync(invalidUpdateResult);
+                .Setup(v => v.ValidateAsync(dto, It.IsAny<CancellationToken>()))
+                .ReturnsAsync(invalidResult);
 
             // Act & Assert
-            await Assert.ThrowsAsync<ValidationException>(() => _service.UpdateAsync(dto, CancellationToken.None));
-            _repoMock.Verify(r => r.ReadByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
+            await Assert.ThrowsAsync<ValidationException>(() => _service.UpdateAsync(_userId, dto, CancellationToken.None));
+
+            // Because the validator fails first, service must not query repo at all.
+            _repoMock.Verify(r => r.ReadByIdAndUserIdAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
             _repoMock.Verify(r => r.CreateOrUpdateAsync(It.IsAny<DocumentModel>(), It.IsAny<CancellationToken>()), Times.Never);
         }
 
         [Fact]
-        public async Task DeleteAsync_Valid_ReturnsTrue_WhenDeleted()
+        public async Task DeleteAsync_Valid_ReturnsTrue_WhenDeleted_AndOwned()
         {
             // Arrange
             var id = Guid.NewGuid();
-            var doc = new DocumentModel { Id = id };
+            var doc = new DocumentModel
+            {
+                Id = id,
+                Title = "ToDelete",
+                Summary = "s",
+                Tags = "",
+                UploadedAt = DateTimeOffset.UtcNow,
+                UserId = _userId
+            };
 
             _repoMock
-                .Setup(r => r.ReadByIdAsync(id, It.IsAny<CancellationToken>()))
+                .Setup(r => r.ReadByIdAndUserIdAsync(id, _userId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(doc);
 
             _repoMock
@@ -368,24 +321,31 @@ namespace Paperless.UnitTests
                 .ReturnsAsync(true);
 
             // Act
-            var result = await _service.DeleteAsync(id, CancellationToken.None);
+            var ok = await _service.DeleteAsync(_userId, id, CancellationToken.None);
 
             // Assert
-            Assert.True(result);
+            Assert.True(ok);
             _repoMock.Verify(r => r.DeleteByIdAsync(id, It.IsAny<CancellationToken>()), Times.Once);
         }
 
         [Fact]
-        public async Task DeleteAsync_Faulty_DocHasMoreThan10Tags_StillDeletes()
+        public async Task DeleteAsync_Faulty_DocHasMoreThan10Tags_StillDeletes_WhenOwned()
         {
-            // Arrange - stored doc has >10 tags but delete should still proceed
+            // Arrange
             var id = Guid.NewGuid();
             var tags = Enumerable.Range(0, 11).Select(i => $"t{i}").ToArray();
-            var doc = new DocumentModel { Id = id };
-            doc.Update("ToDelete", "s", string.Join(',', tags));
+            var doc = new DocumentModel
+            {
+                Id = id,
+                Title = "ToDelete",
+                Summary = "s",
+                Tags = string.Join(',', tags),
+                UploadedAt = DateTimeOffset.UtcNow,
+                UserId = _userId
+            };
 
             _repoMock
-                .Setup(r => r.ReadByIdAsync(id, It.IsAny<CancellationToken>()))
+                .Setup(r => r.ReadByIdAndUserIdAsync(id, _userId, It.IsAny<CancellationToken>()))
                 .ReturnsAsync(doc);
 
             _repoMock
@@ -393,10 +353,10 @@ namespace Paperless.UnitTests
                 .ReturnsAsync(true);
 
             // Act
-            var result = await _service.DeleteAsync(id, CancellationToken.None);
+            var ok = await _service.DeleteAsync(_userId, id, CancellationToken.None);
 
             // Assert
-            Assert.True(result);
+            Assert.True(ok);
             _repoMock.Verify(r => r.DeleteByIdAsync(id, It.IsAny<CancellationToken>()), Times.Once);
         }
     }

@@ -2,8 +2,10 @@ using FluentValidation;
 using FluentValidation.AspNetCore;
 using log4net;
 using log4net.Config;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 using paperless.Api;
 using Paperless.DAL;
 using Paperless.DAL.Repositories;
@@ -42,7 +44,42 @@ builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 builder.Services.AddFluentValidationAutoValidation();
 
 // OpenAPI / Swagger
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi("v1", options =>
+{
+    options.AddDocumentTransformer((document, context, cancellationToken) =>
+    {
+        document.Info = new OpenApiInfo { Title = "Paperless API", Version = "v1" };
+
+        document.Components ??= new OpenApiComponents();
+        document.Components.SecuritySchemes ??= new Dictionary<string, OpenApiSecurityScheme>();
+
+        document.Components.SecuritySchemes["Bearer"] = new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            In = ParameterLocation.Header
+        };
+
+        document.SecurityRequirements ??= new List<OpenApiSecurityRequirement>();
+        document.SecurityRequirements.Add(new OpenApiSecurityRequirement
+        {
+            {
+                new OpenApiSecurityScheme
+                {
+                    Reference = new OpenApiReference
+                    {
+                        Type = ReferenceType.SecurityScheme,
+                        Id = "Bearer"
+                    }
+                },
+                Array.Empty<string>()
+            }
+        });
+
+        return Task.CompletedTask;
+    });
+});
 
 // DB Configuration
 builder.Services.AddDbContext<DataContext>(options =>
@@ -86,9 +123,24 @@ builder.Services.AddScoped<IDocumentService, DocumentService>();
 
 // Document Repository
 builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<ISessionRepository, SessionRepository>();
+
+// AuthService
+builder.Services.AddScoped<IAuthService, AuthService>();
+
+builder.Services
+    .AddAuthentication("Session")
+    .AddScheme<AuthenticationSchemeOptions, SessionAuthHandler>("Session", _ => { });
+
+builder.Services.AddAuthorization();
 
 // Build
 var app = builder.Build();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 
 // ------------------------------------------------------------
 // EXCEPTION HANDLING MIDDLEWARE (FOR UNHANDLED EXCEPTIONS)

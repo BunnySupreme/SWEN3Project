@@ -27,26 +27,37 @@ namespace Paperless.Services
         // ─────────────────────────────────────────────
         // SEARCH
         // ─────────────────────────────────────────────
-        public async Task<IReadOnlyList<DocumentReadDto>> SearchAsync(string searchTerm, CancellationToken ct)
+        public async Task<IReadOnlyList<DocumentReadDto>> SearchAsync(string userId, string searchTerm, CancellationToken ct)
         {
             _logger.Info($"Searching for documents matching searchTerm: {searchTerm}");
 
-            var searchResponse = await _elasticClient.SearchAsync<DocumentSearchModel>(search => search
-                .Indices("documents")
-                .Query(query => query
-                    .MultiMatch(match => match
-                        .Query(searchTerm)
-                        .Fields(
-                            doc => doc.Title,
-                            doc => doc.OcrText,
-                            doc => doc.Summary,
-                            doc => doc.Tags
+            var searchResponse = await _elasticClient.SearchAsync<DocumentSearchModel>(s => s
+                    .Indices("documents")
+                    .Query(q => q
+                        .Bool(b => b
+                            .Filter(f => f
+                                .Term(t => t
+                                    .Field(d => d.UserId)
+                                    .Value(userId)
+                                )
+                            )
+                            .Must(m => m
+                                .MultiMatch(mm => mm
+                                    .Query(searchTerm)
+                                    .Fields(
+                                        d => d.Title,
+                                        d => d.OcrText,
+                                        d => d.Summary,
+                                        d => d.Tags
+                                    )
+                                    .Fuzziness(new Fuzziness("Auto"))
+                                )
+                            )
                         )
-                        .Fuzziness(new Fuzziness("AUTO"))
                     )
-                )
-                .Size(10) // Maximum number of results to return
-            );
+                    .Size(10)
+                );
+
 
             if (!searchResponse.IsValidResponse)
             {

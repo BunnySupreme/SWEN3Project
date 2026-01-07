@@ -57,45 +57,37 @@ public sealed class DocumentService : IDocumentService
     // LIST
     // ─────────────────────────────────────────────
     public async Task<IReadOnlyList<DocumentReadDto>> ListAsync(
-        string? title, int skip, int take, CancellationToken ct = default)
+        Guid userId, string? title, int skip, int take, CancellationToken ct = default)
     {
         _logger.Info($"Listing document info from DB. Title filter: '{title ?? "null"}', Skip: {skip}, Take: {take}");
 
-        var docs = string.IsNullOrWhiteSpace(title)
-            ? await _repo.ReadAllAsync(ct)
-            : await _repo.ReadByTitleAsync(title, ct);
-
-        return docs
-            .OrderByDescending(d => d.UploadedAt)
-            .ThenByDescending(d => d.Title)
-            .Skip(skip)
-            .Take(take)
-            .Select(d => _mapper.Map<DocumentReadDto>(d))
-            .ToList()
-            .AsReadOnly();
+        var docs = await _repo.ReadListAsync(userId, title, skip, take, ct);
+        return docs.Select(_mapper.Map<DocumentReadDto>).ToList().AsReadOnly();
     }
 
     // ─────────────────────────────────────────────
     // GET
     // ─────────────────────────────────────────────
-    public async Task<DocumentReadDto?> GetAsync(Guid id, CancellationToken ct = default)
+    public async Task<DocumentReadDto?> GetAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
         _logger.Info($"Fetching document info from DB with ID: {id}");
 
-        var doc = await _repo.ReadByIdAsync(id, ct);
-
+        var doc = await _repo.ReadByIdAndUserIdAsync(id, userId, ct);
         return doc is null ? null : _mapper.Map<DocumentReadDto>(doc);
     }
 
     // ─────────────────────────────────────────────
     // DOWNLOAD
     // ─────────────────────────────────────────────
-    public async Task<MemoryStream> DownloadAsync(Guid id, CancellationToken ct = default)
+    public async Task<MemoryStream> DownloadAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
         _logger.Info($"Downloading document from MinIO with ID: {id}");
 
         var fileName = id.ToString();
         var memoryStream = new MemoryStream();
+
+        var exists = await _repo.ExistsForUserAsync(id, userId, ct);
+        if (!exists) throw new KeyNotFoundException();
 
         await _minioClient.GetObjectAsync(new GetObjectArgs()
             .WithBucket(BucketName)
@@ -113,7 +105,7 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     // CREATE
     // ─────────────────────────────────────────────
-    public async Task<DocumentReadDto> CreateAsync(DocumentCreateDto dto, CancellationToken ct = default)
+    public async Task<DocumentReadDto> CreateAsync(Guid userId, DocumentCreateDto dto, CancellationToken ct = default)
     {
         _logger.Info($"Creating new document with Title: '{dto.Title}', Tags: '{dto.Tags}");
 
@@ -125,6 +117,7 @@ public sealed class DocumentService : IDocumentService
         }
 
         var entity = _mapper.Map<DocumentModel>(dto);
+        entity.UserId = userId;
 
         await _repo.CreateOrUpdateAsync(entity, ct);
         await _db.SaveChangesAsync(ct);
@@ -136,7 +129,7 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     // UPLOAD
     // ─────────────────────────────────────────────
-    public async Task<DocumentReadDto> UploadAsync(IFormFile file, DocumentCreateDto dto, CancellationToken ct)
+    public async Task<DocumentReadDto> UploadAsync(Guid userId, IFormFile file, DocumentCreateDto dto, CancellationToken ct)
     {
         // Logger
         _logger.Info($"Uploading new document from file: '{file?.FileName}'");
@@ -159,7 +152,7 @@ public sealed class DocumentService : IDocumentService
         }
 
         // DB (Initial, no summary, summary will be handled via RabbitConsumerService)
-        var created = await CreateAsync(dto, ct); // CreateAsync validates again (mocks return valid) and persists
+        var created = await CreateAsync(userId, dto, ct); // CreateAsync validates again (mocks return valid) and persists
 
         // Minio (Store file)
         try
@@ -196,7 +189,7 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     // UPDATE
     // ─────────────────────────────────────────────
-    public async Task<bool> UpdateAsync(DocumentUpdateDto dto, CancellationToken ct = default)
+    public async Task<bool> UpdateAsync(Guid userId, DocumentUpdateDto dto, CancellationToken ct = default)
     {
         // Logger
         _logger.Info($"Updating document with ID: {dto.Id}");
@@ -210,7 +203,7 @@ public sealed class DocumentService : IDocumentService
         }
 
         // DB
-        var entity = await _repo.ReadByIdAsync(dto.Id, ct);
+        var entity = await _repo.ReadByIdAndUserIdAsync(dto.Id, userId, ct);
         if (entity is null)
         {
             _logger.Warn($"Document with ID: {dto.Id} not found for update.");
@@ -232,7 +225,8 @@ public sealed class DocumentService : IDocumentService
             Title = entity.Title,
             Summary = entity.Summary,
             Tags = entity.Tags,
-            UploadedAt = entity.UploadedAt
+            UploadedAt = entity.UploadedAt,
+            UserId = userId.ToString(),
         };
 
         await _elasticService.UpdateIndexAsync(searchDocument, ct);
@@ -243,13 +237,13 @@ public sealed class DocumentService : IDocumentService
     // ─────────────────────────────────────────────
     // DELETE
     // ─────────────────────────────────────────────
-    public async Task<bool> DeleteAsync(Guid id, CancellationToken ct = default)
+    public async Task<bool> DeleteAsync(Guid userId, Guid id, CancellationToken ct = default)
     {
         // Logger
         _logger.Info($"Deleting document with ID: {id}");
 
         // DB
-        var entity = await _repo.ReadByIdAsync(id, ct);
+        var entity = await _repo.ReadByIdAndUserIdAsync(id, userId, ct);
         if (entity is null)
         {
             _logger.Warn($"Document with ID: {id} not found for deletion.");

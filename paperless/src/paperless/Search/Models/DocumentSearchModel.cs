@@ -8,5 +8,6 @@
         public string Summary { get; set; } = string.Empty;
         public string Tags { get; set; } = string.Empty;
         public DateTimeOffset UploadedAt { get; set; }
+        public string UserId { get; set; } = string.Empty;
     }
 }

@@ -29,6 +29,11 @@ namespace Paperless.DAL.Models
         public string Tags { get; set; }
         [Required][Column("uploadedat")]
         public DateTimeOffset UploadedAt { get; set; } = default!;
+
+        [Required]
+        [Column("userid")]
+        public Guid UserId { get; set; }
+
         #endregion
 
         #region Methods
