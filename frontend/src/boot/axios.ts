@@ -1,19 +1,16 @@
-﻿import axios from 'axios'
+﻿import axios, { AxiosHeaders, type InternalAxiosRequestConfig } from 'axios'
 import { boot } from 'quasar/wrappers'
 import { getToken } from '../services/authToken'
-import type { AxiosRequestHeaders } from 'axios'
 
-export const api = axios.create({
-  baseURL: '/api',
-})
+export const api = axios.create({ baseURL: '/api' })
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   const token = getToken()
+  if (!token) return config
 
-  if (token) {
-    config.headers = (config.headers ?? {}) as AxiosRequestHeaders
-    config.headers.Authorization = `Bearer ${token}`
-  }
+  const headers = AxiosHeaders.from(config.headers)
+  headers.set('Authorization', `Bearer ${token}`)
+  config.headers = headers
 
   return config
 })
