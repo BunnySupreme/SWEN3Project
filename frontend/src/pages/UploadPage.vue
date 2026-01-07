@@ -52,7 +52,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { Notify } from 'quasar';
-import { uploadDocument } from 'src/api/client';
+import { uploadDocument } from '../api/client';
 
 const form = ref();
 const uploader = ref();

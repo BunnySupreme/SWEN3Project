@@ -54,7 +54,7 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { register } from 'src/services/authApi'
+import { register } from '../services/authApi'
 
 const router = useRouter()
 
@@ -63,7 +63,7 @@ const password = ref('')
 const confirmPassword = ref('')
 const loading = ref(false)
 const error = ref<string | null>(null)
-import { getHttpErrorMessage } from 'src/utils/httpError'
+import { getHttpErrorMessage } from '../utils/httpError'
 
 async function onSubmit() {
   loading.value = true

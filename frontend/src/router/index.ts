@@ -1,4 +1,4 @@
-import { defineRouter } from '#q-app/wrappers'
+import { route } from 'quasar/wrappers'
 import {
   createMemoryHistory,
   createRouter,
@@ -6,9 +6,9 @@ import {
   createWebHistory,
 } from 'vue-router'
 import routes from './routes'
-import { getToken } from 'src/services/authToken'
+import { getToken } from '../services/authToken'
 
-export default defineRouter(function () {
+export default route(function () {
   const createHistory = process.env.SERVER
     ? createMemoryHistory
     : process.env.VUE_ROUTER_MODE === 'history'
@@ -22,18 +22,10 @@ export default defineRouter(function () {
   })
 
   Router.beforeEach((to) => {
-    // allow public routes
     if (to.meta.public) return true
 
     const token = getToken()
     const isAuth = !!token
-
-    if (to.meta.public) {
-      if (isAuth && (to.name === 'login' || to.name === 'register')) {
-        return { name: 'home' }
-      }
-      return true
-    }
 
     if (!isAuth) return { name: 'login', query: { next: to.fullPath } }
     return true
