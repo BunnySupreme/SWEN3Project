@@ -24,6 +24,7 @@ public class AuthController : ControllerBase
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
 
     public async Task<ActionResult<AuthResponse>> Login([FromBody] LoginRequest req, CancellationToken ct)
     {
