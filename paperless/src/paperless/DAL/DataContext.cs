@@ -24,6 +24,16 @@ namespace Paperless.DAL
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<DocumentModel>()
+                .HasOne<UserModel>()
+                .WithMany()
+                .HasForeignKey(document => document.UserId) // FK: UserId
+                .OnDelete(DeleteBehavior.Cascade);          // Cascade: Deleting a User will delete all its Documents
+            modelBuilder.Entity<SessionModel>()
+                .HasOne<UserModel>()
+                .WithMany()
+                .HasForeignKey(session => session.UserId)   // FK: UserId
+                .OnDelete(DeleteBehavior.Cascade);          // Cascade: Deleting a User will delete all its Sessions
             base.OnModelCreating(modelBuilder);
         }
         #endregion
