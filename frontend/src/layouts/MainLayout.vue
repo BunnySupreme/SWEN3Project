@@ -6,7 +6,11 @@
 
         <q-space />
 
-        <q-input standout v-model="text" label="Search" />
+        <q-input
+          standout
+          v-model="text"
+          label="Search"
+          @keyup.enter="onSearch" />
         <q-btn
           flat
           dense

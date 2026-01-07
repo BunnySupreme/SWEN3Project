@@ -25,10 +25,13 @@ import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import type { QTableColumn } from 'quasar';
 import { search, type DocumentReadDto } from 'src/api/client';
+import { watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 const router = useRouter();
 const rows = ref<DocumentReadDto[]>([]);
 const loading = ref(false);
+const route = useRoute();
 
 const columns: QTableColumn<DocumentReadDto>[] = [
   {
@@ -60,13 +63,25 @@ const columns: QTableColumn<DocumentReadDto>[] = [
   }
 ]
 
+watch(
+  () => route.query.text,
+  async (newText) => {
+    if (newText) {
+      await search(newText as string).then((data) => {
+        rows.value = data;
+      });
+    }
+  },
+  { immediate: true }
+)
+
 function goDetail (_evt: unknown, row: DocumentReadDto) {
   void router.push({ name: 'docDetail', params: { id: row.id } })
 }
 
 onMounted(async () => {
   loading.value = true;
-  const searchTerm = String(router.currentRoute.value.query.text ?? 'fuck')
+  const searchTerm = String(router.currentRoute.value.query.text);
   try { rows.value = await search(searchTerm); }
   finally { loading.value = false; }
 });
