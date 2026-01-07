@@ -35,7 +35,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { ref } from 'vue'
-import { logout } from 'src/services/authApi'
+import { logout } from '../services/authApi'
 
 const router = useRouter()
 const text = ref('')

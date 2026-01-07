@@ -1,12 +1,7 @@
-import { api } from 'boot/axios'
-import { setToken, clearToken } from 'src/services/authToken'
+import { api } from '../boot/axios'
+import { setToken, clearToken } from './authToken'
 
 export type RegisterRequest = {
-  username: string
-  password: string
-}
-
-export type LoginRequest = {
   username: string
   password: string
 }

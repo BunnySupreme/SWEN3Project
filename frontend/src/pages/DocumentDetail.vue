@@ -55,7 +55,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { getDocument, downloadDocument, type DocumentReadDto } from 'src/api/client';
+import { getDocument, downloadDocument, type DocumentReadDto } from '../api/client';
 
 const route = useRoute();
 const doc = ref<DocumentReadDto | null>(null);
