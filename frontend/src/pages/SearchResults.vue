@@ -34,35 +34,34 @@ const columns: QTableColumn<DocumentReadDto>[] = [
   {
     name: 'title',
     label: 'Title',
-    field: (row) => row.title,
+    field: (row: DocumentReadDto) => row.title,
     align: 'left',
     sortable: true
   },
   {
     name: 'tags',
     label: 'Tags',
-    field: (row) => row.tags?.join(', ') ?? '',
-    align: 'left',
-    sortable: false
+    field: (row: DocumentReadDto) => row.tags?.join(', ') ?? '',
+    align: 'left'
   },
   {
     name: 'uploadedAt',
     label: 'Uploaded',
-    field: (row) => new Date(row.uploadedAt).toLocaleString(),
+    field: (row: DocumentReadDto) =>
+      new Date(row.uploadedAt).toLocaleString(),
     align: 'left',
     sortable: true
   },
   {
     name: 'summary',
     label: 'Summary',
-    field: (row) => row.summary,
-    align: 'left',
-    sortable: false
+    field: (row: DocumentReadDto) => row.summary,
+    align: 'left'
   }
-];
+]
 
-function goDetail(_evt: unknown, row: DocumentReadDto) {
-  void router.push({ name: 'docDetail', params: { id: row.id } });
+function goDetail (_evt: unknown, row: DocumentReadDto) {
+  void router.push({ name: 'docDetail', params: { id: row.id } })
 }
 
 onMounted(async () => {
