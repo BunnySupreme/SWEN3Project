@@ -90,7 +90,7 @@ main() {
   test_upload_happy_path
   test_upload_invalid_file
   test_upload_without_file
-  test_worker_log_for_upload
+  test_summary_filled_after_upload
   test_login_wrong_password
   test_protected_endpoint_requires_auth
   test_protected_endpoint_rejects_bad_token
@@ -326,6 +326,65 @@ test_search_documents() {
 
   log "Search successful (200) and returned JSON array"
 }
+
+test_summary_filled_after_upload() {
+  log "Test: Summary is generated after upload (poll GET until filled)"
+
+  require_cmd jq
+
+  local file="$SAMPLES_DIR/hello.pdf"
+  [ -f "$file" ] || fail "Sample-file missing: $file"
+
+  # Upload
+  local upload_url="$BASE_URL$DOC_UPLOAD_PATH"
+  local response_file
+  response_file="$(mktemp)"
+
+  local upload_code
+  upload_code=$(curl -sS -o "$response_file" -w '%{http_code}' \
+    -H "$(auth_header)" \
+    -F "file=@${file};type=application/pdf" \
+    "$upload_url")
+
+  [ "$upload_code" -eq 201 ] || fail "Upload for Summary-Test: expected 201, got: $upload_code"
+
+  local doc_id
+  doc_id="$(jq -r '.id // .Id // empty' "$response_file")"
+  [ -n "$doc_id" ] || fail "Upload-Response missing id. Body: $(cat "$response_file")"
+
+  local get_url="$BASE_URL$DOC_GET_PATH_PREFIX/$doc_id"
+
+  # Poll until Summary is non-empty (async generation)
+  local max_attempts=60      # 60 * 2s = 120s
+  local sleep_seconds=2
+
+  local i=1
+  while [ "$i" -le "$max_attempts" ]; do
+    local get_file
+    get_file="$(mktemp)"
+
+    local get_code
+    get_code=$(curl -sS -o "$get_file" -w '%{http_code}' \
+      -H "$(auth_header)" \
+      "$get_url" || true)
+
+    [ "$get_code" -eq 200 ] || fail "GET Document during Summary-Test: expected 200, got: $get_code"
+
+    local summary
+    summary="$(jq -r '(.summary // .Summary // "") | gsub("^\\s+|\\s+$";"")' "$get_file" 2>/dev/null || true)"
+
+    if [ -n "$summary" ]; then
+      log "Summary present after $i attempt(s)"
+      return 0
+    fi
+
+    sleep "$sleep_seconds"
+    i=$((i + 1))
+  done
+
+  fail "Summary not filled after $((max_attempts * sleep_seconds)) seconds for doc_id=$doc_id"
+}
+
 
 
 
