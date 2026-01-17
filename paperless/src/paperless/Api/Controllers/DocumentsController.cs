@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Paperless.Services;
-using System.Security.Claims;
 
 namespace Paperless.Api.Controllers;
 

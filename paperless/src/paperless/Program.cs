@@ -12,6 +12,7 @@ using Paperless.DAL.Repositories;
 using Paperless.Services;
 using System.Text.Json;
 using Elastic.Clients.Elasticsearch;
+using paperless.Services;
 
 // ------------------------------------------------------------
 // CONFIGURE LOG4NET & CREATE LOGGER
@@ -121,7 +122,7 @@ builder.Services.AddHostedService<RabbitConsumerService>(sp =>
 // Document Service
 builder.Services.AddScoped<IDocumentService, DocumentService>();
 
-// Document Repository
+// Repositories
 builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
@@ -134,6 +135,9 @@ builder.Services
     .AddScheme<AuthenticationSchemeOptions, SessionAuthHandler>("Session", _ => { });
 
 builder.Services.AddAuthorization();
+
+// XmlService
+builder.Services.AddScoped<IXmlService, XmlService>();
 
 // Build
 var app = builder.Build();
