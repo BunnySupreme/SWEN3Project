@@ -11,6 +11,7 @@ SAMPLES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/samples"
 # Endpoint routes
 DOC_UPLOAD_PATH="${DOC_UPLOAD_PATH:-/api/documents/upload}"
 DOC_GET_PATH_PREFIX="${DOC_GET_PATH_PREFIX:-/api/documents}"
+DOC_SEARCH_PATH="${DOC_SEARCH_PATH:-/api/documents/search}"
 
 # Auth routes
 AUTH_REGISTER_PATH="${AUTH_REGISTER_PATH:-/api/auth/register}"
@@ -94,6 +95,8 @@ main() {
   test_protected_endpoint_requires_auth
   test_protected_endpoint_rejects_bad_token
   test_logout_revokes_token
+  test_search_documents
+
 
   log "All tests passed."
 }
@@ -286,6 +289,44 @@ test_logout_revokes_token() {
   # Re-login so later tests still work if needed.
   auth_login
 }
+
+test_search_documents() {
+  log "Test: Search – requires auth, validates input, returns results"
+
+  local url="$BASE_URL$DOC_SEARCH_PATH"
+
+  # 1) No auth -> 401
+  local code
+  code=$(curl -sS -o /dev/null -w '%{http_code}' \
+    -H 'Content-Type: application/json' \
+    -d '{"searchTerm":"hello"}' \
+    "$url" || true)
+  [ "$code" -eq 401 ] || fail "Search without token: expected 401, got: $code"
+
+  # 2) Empty term -> 400 (authorized)
+  code=$(curl -sS -o /tmp/search_empty.json -w '%{http_code}' \
+    -H "$(auth_header)" \
+    -H 'Content-Type: application/json' \
+    -d '{"searchTerm":"   "}' \
+    "$url" || true)
+  [ "$code" -eq 400 ] || fail "Search empty term: expected 400, got: $code"
+
+  # 3) Non-empty -> 200 and JSON array (authorized)
+  code=$(curl -sS -o /tmp/search_ok.json -w '%{http_code}' \
+    -H "$(auth_header)" \
+    -H 'Content-Type: application/json' \
+    -d '{"searchTerm":"hello"}' \
+    "$url" || true)
+  [ "$code" -eq 200 ] || fail "Search valid term: expected 200, got: $code"
+
+  # Validate it's an array (may be empty)
+  require_cmd jq
+  jq -e 'type=="array"' /tmp/search_ok.json >/dev/null \
+    || fail "Search response is not a JSON array: $(cat /tmp/search_ok.json)"
+
+  log "Search successful (200) and returned JSON array"
+}
+
 
 
 main "$@"
