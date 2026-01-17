@@ -55,8 +55,8 @@ public class DocumentsControllerTests
         // Arrange
         var docs = new List<DocumentReadDto>
         {
-            new DocumentReadDto(Guid.NewGuid(), "Title1", "Summary1", new[] { "tag1" }, DateTimeOffset.Now),
-            new DocumentReadDto(Guid.NewGuid(), "Title2", "Summary2", Array.Empty<string>(), DateTimeOffset.Now)
+            new DocumentReadDto(Guid.NewGuid(), "Title1", "Summary1", new[] { "tag1" }, DateTimeOffset.Now, AccessCount : 0),
+            new DocumentReadDto(Guid.NewGuid(), "Title2", "Summary2", Array.Empty<string>(), DateTimeOffset.Now, AccessCount : 0)
         };
 
         _documentServiceMock
@@ -102,7 +102,7 @@ public class DocumentsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var dto = new DocumentReadDto(id, "T", "S", Array.Empty<string>(), DateTimeOffset.Now);
+        var dto = new DocumentReadDto(id, "T", "S", Array.Empty<string>(), DateTimeOffset.Now, AccessCount: 0);
 
         _documentServiceMock
             .Setup(s => s.GetAsync(TestUserId, id, It.IsAny<CancellationToken>()))
@@ -187,8 +187,8 @@ public class DocumentsControllerTests
     public async Task Create_ShouldReturn201_WhenCreated()
     {
         // Arrange
-        var createDto = new DocumentCreateDto(Title: "New", Summary: "S", Tags: Array.Empty<string>());
-        var created = new DocumentReadDto(Guid.NewGuid(), "New", "S", Array.Empty<string>(), DateTimeOffset.Now);
+        var createDto = new DocumentCreateDto(Title: "New", Summary: "S", Tags: Array.Empty<string>(), AccessCount: 0);
+        var created = new DocumentReadDto(Guid.NewGuid(), "New", "S", Array.Empty<string>(), DateTimeOffset.Now, AccessCount: 0);
 
         _documentServiceMock
             .Setup(s => s.CreateAsync(TestUserId, It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
@@ -224,7 +224,7 @@ public class DocumentsControllerTests
             ContentType = "application/pdf"
         };
 
-        var created = new DocumentReadDto(Guid.NewGuid(), "test.pdf", string.Empty, Array.Empty<string>(), DateTimeOffset.Now);
+        var created = new DocumentReadDto(Guid.NewGuid(), "test.pdf", string.Empty, Array.Empty<string>(), DateTimeOffset.Now, AccessCount: 0);
 
         _documentServiceMock
             .Setup(s => s.UploadAsync(TestUserId, It.IsAny<IFormFile>(), It.IsAny<DocumentCreateDto>(), It.IsAny<CancellationToken>()))
@@ -249,7 +249,7 @@ public class DocumentsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var dto = new DocumentUpdateDto(Id: id, Title: "T", Summary: "S", Tags: Array.Empty<string>());
+        var dto = new DocumentUpdateDto(Id: id, Title: "T", Summary: "S", Tags: Array.Empty<string>(), AccessCount: 0);
 
         _documentServiceMock
             .Setup(s => s.UpdateAsync(TestUserId, dto, It.IsAny<CancellationToken>()))
@@ -269,7 +269,7 @@ public class DocumentsControllerTests
     public async Task Update_ShouldReturn400_WhenIdMismatch()
     {
         // Arrange
-        var dto = new DocumentUpdateDto(Id: Guid.NewGuid(), Title: "T", Summary: "S", Tags: Array.Empty<string>());
+        var dto = new DocumentUpdateDto(Id: Guid.NewGuid(), Title: "T", Summary: "S", Tags: Array.Empty<string>(), AccessCount: 0);
         var routeId = Guid.NewGuid();
 
         // Act
@@ -289,7 +289,7 @@ public class DocumentsControllerTests
     {
         // Arrange
         var id = Guid.NewGuid();
-        var dto = new DocumentUpdateDto(Id: id, Title: "T", Summary: "S", Tags: Array.Empty<string>());
+        var dto = new DocumentUpdateDto(Id: id, Title: "T", Summary: "S", Tags: Array.Empty<string>(), AccessCount: 0);
 
         _documentServiceMock
             .Setup(s => s.UpdateAsync(TestUserId, dto, It.IsAny<CancellationToken>()))

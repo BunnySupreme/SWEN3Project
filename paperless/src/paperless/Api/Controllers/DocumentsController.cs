@@ -159,7 +159,8 @@ public class DocumentsController : ControllerBase
         var dto = new DocumentCreateDto(
             Title: normalizedTitle,
             Summary: string.Empty,
-            Tags: tagList
+            Tags: tagList,
+            AccessCount: 0
         );
 
         var userId = await GetUserIdOrNull(ct);

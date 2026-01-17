@@ -42,7 +42,8 @@ namespace Paperless.UnitTests
                     Tags: string.IsNullOrWhiteSpace(d.Tags)
                         ? Array.Empty<string>()
                         : d.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                    UploadedAt: d.UploadedAt
+                    UploadedAt: d.UploadedAt,
+                    AccessCount: 0
                 ));
 
             _mapperMock
@@ -178,7 +179,8 @@ namespace Paperless.UnitTests
             var createDto = new DocumentCreateDto(
                 Title: "NewFile",
                 Summary: "sum",
-                Tags: new List<string> { "tag1" }
+                Tags: new List<string> { "tag1" },
+                AccessCount: 0
             );
 
             _createValidatorMock
@@ -208,7 +210,8 @@ namespace Paperless.UnitTests
             var createDto = new DocumentCreateDto(
                 Title: "Bad",
                 Summary: "S",
-                Tags: tags
+                Tags: tags,
+                AccessCount: 0
             );
 
             var invalidResult = new ValidationResult(new[]
@@ -243,7 +246,8 @@ namespace Paperless.UnitTests
                 Id: existing.Id,
                 Title: "Updated",
                 Summary: "new summary",
-                Tags: new List<string> { "tagX" }
+                Tags: new List<string> { "tagX" },
+                AccessCount: 0
             );
 
             _updateValidatorMock
@@ -277,7 +281,8 @@ namespace Paperless.UnitTests
                 Id: Guid.NewGuid(),
                 Title: "T",
                 Summary: "S",
-                Tags: tags
+                Tags: tags,
+                AccessCount: 0
             );
 
             var invalidResult = new ValidationResult(new[]

@@ -125,7 +125,6 @@ public sealed class DocumentService : IDocumentService
         return _mapper.Map<DocumentReadDto>(entity);
     }
 
-
     // ─────────────────────────────────────────────
     // UPLOAD
     // ─────────────────────────────────────────────
@@ -213,7 +212,8 @@ public sealed class DocumentService : IDocumentService
         entity.Update(
             title: dto.Title,
             summary: dto.Summary ?? string.Empty,
-            tags: ToCsv(dto.Tags));
+            tags: ToCsv(dto.Tags),
+            accessCount: dto.AccessCount);
 
         await _repo.CreateOrUpdateAsync(entity, ct);
         await _db.SaveChangesAsync(ct);
@@ -226,7 +226,8 @@ public sealed class DocumentService : IDocumentService
             Summary = entity.Summary,
             Tags = entity.Tags,
             UploadedAt = entity.UploadedAt,
-            UserId = userId.ToString()
+            UserId = userId.ToString(),
+            AccessCount = entity.AccessCount,
         };
 
         await _elasticService.UpdateIndexAsync(searchDocument, ct);

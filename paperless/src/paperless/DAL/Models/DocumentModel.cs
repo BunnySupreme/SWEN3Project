@@ -19,29 +19,43 @@ namespace Paperless.DAL.Models
         #endregion
 
         #region Properties
-        [Key][Column("id")]
+        [Key]
+        [Column("id")]
         public Guid Id { get; set; }
-        [Required][MaxLength(255)][Column("title")]
+
+        [Required]
+        [MaxLength(255)]
+        [Column("title")]
         public string Title { get; set; } = default!; // default! to suppress nullable warning (default value setting occurs in constructor)
-        [Required][Column("summary")]
+        
+        [Required]
+        [Column("summary")]
         public string Summary { get; set; } = default!;
+        
         [Column("tags")]
         public string Tags { get; set; }
-        [Required][Column("uploadedat")]
+
+        [Required]
+        [Column("uploadedat")]
         public DateTimeOffset UploadedAt { get; set; } = default!;
 
         [Required]
         [Column("userid")]
         public Guid UserId { get; set; }
 
+        [Required]
+        [Range(0, int.MaxValue)]
+        [Column("accesscount")]
+        public int AccessCount { get; set; }
         #endregion
 
         #region Methods
-        public void Update(string title, string summary, string tags)
+        public void Update(string title, string summary, string tags, int accessCount)
         {
             Title = title;
             Summary = summary;
             Tags = tags;
+            AccessCount = accessCount;
         }
         #endregion
     }

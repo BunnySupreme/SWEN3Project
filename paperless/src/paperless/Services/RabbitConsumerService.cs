@@ -158,7 +158,8 @@ namespace Paperless.Services
                 document.Update(
                     title: document.Title,
                     summary: result.Summary, // Only summary needs an update
-                    tags: document.Tags);
+                    tags: document.Tags,
+                    accessCount: document.AccessCount);
 
                 await documentRepo.CreateOrUpdateAsync(document, ct);
                 await db.SaveChangesAsync(ct);
@@ -173,7 +174,8 @@ namespace Paperless.Services
                     Summary = result.Summary,
                     Tags = document.Tags,
                     UploadedAt = document.UploadedAt,
-                    UserId = document.UserId.ToString()
+                    UserId = document.UserId.ToString(),
+                    AccessCount = document.AccessCount
                 };
 
                 using var scopeElastic = _serviceProvider.CreateScope();
