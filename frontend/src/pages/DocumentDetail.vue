@@ -60,7 +60,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { getDocument, downloadDocument, type DocumentReadDto } from '../api/client';
+import { getDocument, downloadDocument, logDocumentAccess, type DocumentReadDto } from '../api/client';
 
 const route = useRoute();
 const doc = ref<DocumentReadDto | null>(null);
@@ -69,7 +69,17 @@ const downloading = ref(false);
 onMounted(async () => {
   const id = String(route.params.id);
   doc.value = await getDocument(id);
+  await logAccess();
 });
+
+async function logAccess() {
+  if (!doc.value) return;
+  try {
+    await logDocumentAccess(doc.value.id);
+  } catch (error) {
+    console.error('Failed to log document access:', error);
+  }
+}
 
 async function handleDownload() {
   if (!doc.value) return;
