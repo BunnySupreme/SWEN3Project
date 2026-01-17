@@ -1,5 +1,7 @@
 ﻿using log4net;
+using Paperless.BatchProcessor.DAL;
 using Paperless.BatchProcessor.Services.Records;
+using Paperless.DAL.Repositories;
 using System.Xml.Linq;
 
 namespace Paperless.BatchProcessor.Services
@@ -7,18 +9,22 @@ namespace Paperless.BatchProcessor.Services
     public class XmlProcessorService : IXmlProcessorService
     {
         #region Fields
+        private readonly IDocumentRepository _documentRepository;
+        private readonly DataContext _db;
         private readonly ILog _logger;
         #endregion
 
         #region Constructors
-        public XmlProcessorService()
+        public XmlProcessorService(IDocumentRepository documentRepository, DataContext db)
         {
+            _documentRepository = documentRepository;
+            _db = db;
             _logger = LogManager.GetLogger(typeof(XmlProcessorService));
         }
         #endregion
 
         #region Methods
-        public Task RunOnceAsync(string inputDir, string archiveDir, string errorDir, string filePattern)
+        public async Task RunOnceAsync(string inputDir, string archiveDir, string errorDir, string filePattern, CancellationToken ct = default)
         {
             _logger.Info("Looking for files to process.");
 
@@ -33,7 +39,7 @@ namespace Paperless.BatchProcessor.Services
             if (files.Length == 0)
             {
                 _logger.Info("No files to process.");
-                return Task.CompletedTask;
+                return;
             }
 
             _logger.Info($"Found {files.Length} files to process.");
@@ -41,13 +47,12 @@ namespace Paperless.BatchProcessor.Services
             // Process each file
             foreach (var filePath in files.OrderBy(p => p))
             {
-                ProcessXml(filePath, archiveDir, errorDir);
+                await ProcessXml(filePath, archiveDir, errorDir);
             }
-
-            return Task.CompletedTask;
+            return;
         }
 
-        private void ProcessXml(string filePath, string archiveDir, string errorDir)
+        private async Task ProcessXml(string filePath, string archiveDir, string errorDir, CancellationToken ct = default)
         {
             var fileName = Path.GetFileName(filePath);
             _logger.Info($"Processing file: '{fileName}'.");
@@ -61,7 +66,12 @@ namespace Paperless.BatchProcessor.Services
                 foreach (AccessEntry entry in entries)
                 {
                     // Update DB
+                    if(!await _documentRepository.UpdateAccessCountAsync(entry.DocumentId, entry.AccessCount, ct))
+                    {
+                        _logger.Info($"Could not process access log entry: '{entry}'");
+                    }
                 }
+                await _db.SaveChangesAsync(ct);
 
                 // Archive file
                 MoveOrOverwrite(filePath, Path.Combine(archiveDir, fileName));
@@ -76,6 +86,11 @@ namespace Paperless.BatchProcessor.Services
             }
         }
 
+        // Expected format:
+        // <accessLogs batchDate="YYYY-MM-DD">
+        //   <entry documentId="GUID-1" accessCount="X" />
+        //   <entry documentId="GUID-2" accessCount="Y" />
+        // </accessLogs>
         private static (DateOnly batchDate, List<AccessEntry> entries) ReadXml(string filePath)
         {
             // Read XML file
