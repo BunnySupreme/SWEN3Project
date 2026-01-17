@@ -67,10 +67,12 @@ auth_login() {
 
   [ "$code" -eq 200 ] || fail "Auth login: expected 200, got: $code"
 
-  [ -n "$TOKEN" ] || fail "Auth login: could not extract token (check AuthResponse JSON fields)"
+  TOKEN="$(jq -r '.accessToken // .token // .jwt // empty' "$response_file")"
+  [ -n "$TOKEN" ] || fail "Auth login: could not extract token (check AuthResponse JSON fields). Response: $(cat "$response_file")"
 
   log "Auth login: token acquired"
 }
+
 
 main() {
   require_cmd curl
@@ -88,6 +90,10 @@ main() {
   test_upload_invalid_file
   test_upload_without_file
   test_worker_log_for_upload
+  test_login_wrong_password
+  test_protected_endpoint_requires_auth
+  test_protected_endpoint_rejects_bad_token
+  test_logout_revokes_token
 
   log "All tests passed."
 }
@@ -210,5 +216,76 @@ test_worker_log_for_upload() {
 
   log "Worker-Logs increased after Upload → Message probably processed"
 }
+
+test_login_wrong_password() {
+  log "Test: Auth – login fails with wrong password"
+  local url="$BASE_URL$AUTH_LOGIN_PATH"
+  local code
+  code=$(curl -sS -o /tmp/login_fail.json -w '%{http_code}' \
+    -H 'Content-Type: application/json' \
+    -d "{\"username\":\"${AUTH_USERNAME}\",\"password\":\"${AUTH_PASSWORD}__wrong\"}" \
+    "$url" || true)
+  [ "$code" -eq 400 ] || fail "Login wrong password: expected 400, got: $code"
+}
+
+test_protected_endpoint_requires_auth() {
+  log "Test: Auth – protected endpoint rejects missing token"
+  local file="$SAMPLES_DIR/hello.pdf"
+  [ -f "$file" ] || fail "Sample-file missing: $file"
+
+  local url="$BASE_URL$DOC_UPLOAD_PATH"
+  local code
+  code=$(curl -sS -o /dev/null -w '%{http_code}' \
+    -F "file=@${file};type=application/pdf" \
+    "$url" || true)
+
+  # Depending on ASP.NET auth config: 401 or 403.
+  if [ "$code" -ne 401 ] && [ "$code" -ne 403 ]; then
+    fail "Protected endpoint without token: expected 401/403, got: $code"
+  fi
+}
+
+test_protected_endpoint_rejects_bad_token() {
+  log "Test: Auth – protected endpoint rejects malformed token"
+  local file="$SAMPLES_DIR/hello.pdf"
+  [ -f "$file" ] || fail "Sample-file missing: $file"
+
+  local url="$BASE_URL$DOC_UPLOAD_PATH"
+  local code
+  code=$(curl -sS -o /dev/null -w '%{http_code}' \
+    -H "Authorization: Bearer not-a-token" \
+    -F "file=@${file};type=application/pdf" \
+    "$url" || true)
+
+  [ "$code" -eq 401 ] || fail "Protected endpoint bad token: expected 401, got: $code"
+}
+
+test_logout_revokes_token() {
+  log "Test: Auth – logout revokes token"
+  local logout_url="$BASE_URL/api/auth/logout"
+
+  local code
+  code=$(curl -sS -o /dev/null -w '%{http_code}' \
+    -H "$(auth_header)" \
+    -X POST \
+    "$logout_url" || true)
+
+  [ "$code" -eq 204 ] || fail "Logout: expected 204, got: $code"
+
+  # After logout, token should no longer work.
+  local file="$SAMPLES_DIR/hello.pdf"
+  local upload_url="$BASE_URL$DOC_UPLOAD_PATH"
+  local upload_code
+  upload_code=$(curl -sS -o /dev/null -w '%{http_code}' \
+    -H "$(auth_header)" \
+    -F "file=@${file};type=application/pdf" \
+    "$upload_url" || true)
+
+  [ "$upload_code" -eq 401 ] || fail "Token after logout: expected 401, got: $upload_code"
+
+  # Re-login so later tests still work if needed.
+  auth_login
+}
+
 
 main "$@"
