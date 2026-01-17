@@ -6,6 +6,7 @@ export interface DocumentReadDto {
   uploadedAt: string;
   summary: string;
   tags: string[];
+  accessCount: number;
 }
 
 export async function listDocuments() {
@@ -30,6 +31,7 @@ export async function uploadDocument(file: File, title: string, tagsCsv: string)
   form.append('file', file, file.name);
   form.append('title', title);
   form.append('tags',  tagsCsv);
+  form.append('accessCount', '0');
   const { data } = await api.post('/documents/upload', form); // baseURL '/api'
   return data;
 }

@@ -31,6 +31,11 @@
           <b>Summary:</b>
           <div class="q-mt-xs">{{ doc.summary || '—' }}</div>
         </div>
+
+        <div class="q-mt-md">
+          <b>Access Count:</b>
+          <div class="q-mt-xs">{{ doc.accessCount }}</div>
+        </div>
       </q-card-section>
 
       <q-separator />
