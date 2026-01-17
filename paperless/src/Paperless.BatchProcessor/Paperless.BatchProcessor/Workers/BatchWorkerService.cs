@@ -8,6 +8,10 @@ namespace Paperless.BatchProcessor.Workers
         #region Fields
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly ILog _logger;
+        private readonly string _accessLogInputDir = Environment.GetEnvironmentVariable("ACCESSLOG_INPUTDIR") ?? "/app/xml_data/input";
+        private readonly string _accessLogArchiveDir = Environment.GetEnvironmentVariable("ACCESSLOG_ARCHIVEDIR") ?? "/app/xml_data/archive";
+        private readonly string _accessLogErrorDir = Environment.GetEnvironmentVariable("ACCESSLOG_ERRORDIR") ?? "/app/xml_data/error";
+        private readonly string _filePattern = "*.xml";
         #endregion
 
         #region Constructors
@@ -33,15 +37,8 @@ namespace Paperless.BatchProcessor.Workers
                     // Scope XML Processor Service
                     var xmlProcessorService = scope.ServiceProvider.GetRequiredService<IXmlProcessorService>();
 
-                    // Define folders
-                    var baseDir = AppContext.BaseDirectory;
-                    var inputDir = Path.Combine(baseDir, "input");
-                    var archiveDir = Path.Combine(baseDir, "archive");
-                    var errorDir = Path.Combine(baseDir, "error");
-                    var filePattern = "*.xml";
-
                     // Process files
-                    await xmlProcessorService.RunOnceAsync(inputDir, archiveDir, errorDir, filePattern);
+                    await xmlProcessorService.RunOnceAsync(_accessLogInputDir, _accessLogArchiveDir, _accessLogErrorDir, _filePattern);
                 }
 
                 // Wait until next batch processing

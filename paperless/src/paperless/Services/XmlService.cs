@@ -7,7 +7,7 @@ namespace paperless.Services
     {
         #region Fields
         private readonly ILog _logger;
-        private static string _inputDir = Path.Combine(AppContext.BaseDirectory, "input");
+        private readonly string _accessLogInputDir = Environment.GetEnvironmentVariable("ACCESSLOG_INPUTDIR") ?? "/app/xml_data/input";
         #endregion
 
         #region Constructors
@@ -30,7 +30,7 @@ namespace paperless.Services
                 // Setup
                 var today = DateOnly.FromDateTime(DateTime.Now);
                 var fileName = $"accessLog-{today:yyyy-MM-dd}.xml";
-                var filePath = Path.Combine(_inputDir, fileName);
+                var filePath = Path.Combine(_accessLogInputDir, fileName);
 
                 // Lock file to prevent race conditions
                 lock (GetFileLock(filePath))
