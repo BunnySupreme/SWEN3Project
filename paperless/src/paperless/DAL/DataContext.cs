@@ -16,12 +16,6 @@ namespace Paperless.DAL
         #endregion
 
         #region Builders
-        //protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-        //{
-        //    optionsBuilder.UseNpgsql(Configuration.PostgresConnectionString);
-        //    base.OnConfiguring(optionsBuilder);
-        //}
-
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<DocumentModel>()

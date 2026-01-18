@@ -15,26 +15,30 @@ namespace paperless.Api
                .ForCtorParam(nameof(DocumentReadDto.Title), opt => opt.MapFrom(src => src.Title))
                .ForCtorParam(nameof(DocumentReadDto.Summary), opt => opt.MapFrom(src => src.Summary))
                .ForCtorParam(nameof(DocumentReadDto.Tags), opt => opt.MapFrom(src => SplitTags(src.Tags)))
-               .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt));
+               .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt))
+               .ForCtorParam(nameof(DocumentReadDto.AccessCount), opt => opt.MapFrom(src => src.AccessCount));
 
             CreateMap<DocumentSearchModel, DocumentReadDto>()
                 .ForCtorParam(nameof(DocumentReadDto.Id), opt => opt.MapFrom(src => src.Id))
                 .ForCtorParam(nameof(DocumentReadDto.Title), opt => opt.MapFrom(src => src.Title))
                 .ForCtorParam(nameof(DocumentReadDto.Summary), opt => opt.MapFrom(src => src.Summary))
                 .ForCtorParam(nameof(DocumentReadDto.Tags), opt => opt.MapFrom(src => SplitTags(src.Tags)))
-                .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt));
+                .ForCtorParam(nameof(DocumentReadDto.UploadedAt), opt => opt.MapFrom(src => src.UploadedAt))
+                .ForCtorParam(nameof(DocumentReadDto.AccessCount), opt => opt.MapFrom(src => src.AccessCount));
 
             CreateMap<DocumentCreateDto, DocumentModel>()
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
                 .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => JoinTags(src.Tags)))
-                .ForMember(dest => dest.UserId, opt => opt.Ignore());
+                .ForMember(dest => dest.UserId, opt => opt.Ignore())
+                .ForMember(dest => dest.AccessCount, opt => opt.MapFrom(src => src.AccessCount));
 
             CreateMap<DocumentUpdateDto, DocumentModel>() // No Id mapping, as we do not wish to update the Id
                 .ForMember(dest => dest.Title, opt => opt.MapFrom(src => src.Title))
                 .ForMember(dest => dest.Summary, opt => opt.MapFrom(src => src.Summary))
                 .ForMember(dest => dest.Tags, opt => opt.MapFrom(src => JoinTags(src.Tags)))
-                .ForMember(dest => dest.UserId, opt => opt.Ignore());
+                .ForMember(dest => dest.UserId, opt => opt.Ignore())
+                .ForMember(dest => dest.AccessCount, opt => opt.MapFrom(src => src.AccessCount));
         }
         #endregion
 

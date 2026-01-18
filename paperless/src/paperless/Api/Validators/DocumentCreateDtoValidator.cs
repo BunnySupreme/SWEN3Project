@@ -28,6 +28,9 @@ namespace paperless.Api.Validators
                     .NotEmpty().WithMessage("Empty tags are not allowed")
                     .MaximumLength(30).WithMessage("Each tag must not exceed 30 characters");
             });
+
+            RuleFor(x => x.AccessCount)
+                .GreaterThanOrEqualTo(0).WithMessage("AccessCount must be non-negative");
         }
         #endregion
     }

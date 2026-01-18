@@ -1,7 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Paperless.Services;
-using System.Security.Claims;
 
 namespace Paperless.Api.Controllers;
 
@@ -159,7 +158,8 @@ public class DocumentsController : ControllerBase
         var dto = new DocumentCreateDto(
             Title: normalizedTitle,
             Summary: string.Empty,
-            Tags: tagList
+            Tags: tagList,
+            AccessCount: 0
         );
 
         var userId = await GetUserIdOrNull(ct);

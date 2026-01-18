@@ -1,0 +1,17 @@
+﻿{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "Paperless.BatchProcessor": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "environmentVariables": {
+        "DOTNET_ENVIRONMENT": "Development",
+        "POSTGRES_HOST": "localhost",
+        "POSTGRES_PORT": "5432",
+        "POSTGRES_DB": "paperless",
+        "POSTGRES_USER": "paperless",
+        "POSTGRES_PASSWORD_FILE": "../../../../secrets/postgres_password.txt"
+      }
+    }
+  }
+}

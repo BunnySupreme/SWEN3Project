@@ -9,5 +9,6 @@
         public string Tags { get; set; } = string.Empty;
         public DateTimeOffset UploadedAt { get; set; }
         public string UserId { get; set; } = string.Empty;
+        public int AccessCount { get; set; }
     }
 }

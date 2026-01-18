@@ -47,6 +47,13 @@ const columns: QTableColumn<DocumentReadDto>[] = [
     field: (row) => new Date(row.uploadedAt).toLocaleString(),
     align: 'left',
     sortable: true
+  },
+  {
+    name: 'accessCount',
+    label: 'Access Count',
+    field: (row) => row.accessCount,
+    align: 'left',
+    sortable: true
   }
 ];
 

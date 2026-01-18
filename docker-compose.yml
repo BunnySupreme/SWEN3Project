@@ -115,6 +115,7 @@ services:
     container_name: paperless-backend
     volumes:
       - ./logs:/app/logs
+      - xml_data:/app/xml_data
     ports:
       - "5001:5001"
       - "7081:7081"
@@ -133,6 +134,7 @@ services:
       - RABBITMQ_INPUTQUEUE=${RABBITMQ_INPUTQUEUE}
       - RABBITMQ_RESULTSQUEUE=${RABBITMQ_RESULTSQUEUE}
       - MINIO_ROOT_PASSWORD_FILE=/run/secrets/minio_password
+      - ACCESSLOG_INPUTDIR=/app/xml_data/input
     depends_on:
       paperless-postgres:
         condition: service_started
@@ -178,6 +180,31 @@ services:
       - paperless-network
     restart: unless-stopped
 
+  paperless-batchprocessor:
+    build:
+      context: ./paperless/src/Paperless.BatchProcessor/Paperless.BatchProcessor
+      dockerfile: Dockerfile
+    container_name: paperless-batchProcessor
+    volumes:
+      - xml_data:/app/xml_data
+    environment:
+      - POSTGRES_HOST=paperless-postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DATABASE=paperless
+      - POSTGRES_USERNAME=paperless
+      - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+      - ACCESSLOG_INPUTDIR=/app/xml_data/input
+      - ACCESSLOG_ARCHIVEDIR=/app/xml_data/archive
+      - ACCESSLOG_ERRORDIR=/app/xml_data/error
+    depends_on:
+      - paperless-postgres
+      - paperless-backend
+    secrets:
+      - postgres_password
+    networks:
+      - paperless-network
+    restart: unless-stopped
+
   paperless-frontend:
     build:
       context: ./frontend
@@ -207,3 +234,4 @@ volumes:
   postgres_data:
   minio_data:
   elastic_data:
+  xml_data:

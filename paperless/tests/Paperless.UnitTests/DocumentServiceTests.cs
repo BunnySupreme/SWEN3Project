@@ -43,7 +43,8 @@ public class DocumentServiceTests
                     Tags: string.IsNullOrWhiteSpace(d.Tags)
                         ? Array.Empty<string>()
                         : d.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
-                    UploadedAt: d.UploadedAt
+                    UploadedAt: d.UploadedAt,
+                    AccessCount: d.AccessCount
                 )
             );
 
@@ -135,7 +136,8 @@ public class DocumentServiceTests
         var dto = new DocumentCreateDto(
             Title: "NewFile",
             Summary: "sum",
-            Tags: new List<string> { "tag1" }
+            Tags: new List<string> { "tag1" },
+            AccessCount: 0
         );
 
         _createValidatorMock
@@ -177,7 +179,8 @@ public class DocumentServiceTests
             Id: existing.Id,
             Title: "Updated",
             Summary: "new summary",
-            Tags: new List<string> { "tagX" }
+            Tags: new List<string> { "tagX" },
+            AccessCount: 0
         );
 
         _updateValidatorMock

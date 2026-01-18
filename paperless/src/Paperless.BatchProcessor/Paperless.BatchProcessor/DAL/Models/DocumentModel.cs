@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Paperless.DAL.Models
+namespace Paperless.BatchProcessor.DAL.Models
 {
     [Table("documents")][PrimaryKey("Id")]
     public class DocumentModel
@@ -34,28 +34,26 @@ namespace Paperless.DAL.Models
         
         [Column("tags")]
         public string Tags { get; set; }
-
+        
         [Required]
         [Column("uploadedat")]
         public DateTimeOffset UploadedAt { get; set; } = default!;
-
+        
         [Required]
         [Column("userid")]
         public Guid UserId { get; set; }
-
-        [Required]
-        [Range(0, int.MaxValue)]
-        [Column("accesscount")]
-        public int AccessCount { get; set; }
         #endregion
 
+        [Required]
+        [Column("accesscount")]
+        public int AccessCount { get; set; }
+
         #region Methods
-        public void Update(string title, string summary, string tags, int accessCount)
+        public void Update(string title, string summary, string tags)
         {
             Title = title;
             Summary = summary;
             Tags = tags;
-            AccessCount = accessCount;
         }
         #endregion
     }

@@ -60,6 +60,13 @@ const columns: QTableColumn<DocumentReadDto>[] = [
     label: 'Summary',
     field: (row: DocumentReadDto) => row.summary,
     align: 'left'
+  },
+  {
+    name: 'accessCount',
+    label: 'Access Count',
+    field: (row: DocumentReadDto) => row.accessCount,
+    align: 'left',
+    sortable: true
   }
 ]
 
