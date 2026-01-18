@@ -2,7 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
 
-namespace Paperless.DAL.Models
+namespace Paperless.BatchProcessor.DAL.Models
 {
     [Table("documents")][PrimaryKey("Id")]
     public class DocumentModel

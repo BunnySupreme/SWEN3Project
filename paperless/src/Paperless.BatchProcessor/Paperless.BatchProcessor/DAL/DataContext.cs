@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Paperless.DAL.Models;
+using Paperless.BatchProcessor.DAL.Models;
 
 namespace Paperless.BatchProcessor.DAL
 {
@@ -17,7 +17,9 @@ namespace Paperless.BatchProcessor.DAL
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<DocumentModel>()
-                .ToTable("Documents"); // Use table set up by REST server (which is our single point of truth)
+                .ToTable("documents") // Use table set up by REST server (which is our single point of truth), lowercase as that's how it's stored in 
+                .HasKey(d => d.Id);
+            base.OnModelCreating(modelBuilder);
         }
         #endregion
     }

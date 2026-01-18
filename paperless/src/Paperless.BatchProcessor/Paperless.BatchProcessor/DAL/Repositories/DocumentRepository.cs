@@ -1,7 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Paperless.BatchProcessor.DAL;
 
-namespace Paperless.DAL.Repositories
+namespace Paperless.BatchProcessor.DAL.Repositories
 {
     public class DocumentRepository : IDocumentRepository
     {

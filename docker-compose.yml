@@ -164,9 +164,9 @@ services:
       - paperless-network
     restart: unless-stopped
 
-  paperless-batchProcessor:
+  paperless-batchprocessor:
     build:
-      context: ./paperless/src/Paperless.batchProcessor
+      context: ./paperless/src/Paperless.BatchProcessor/Paperless.BatchProcessor
       dockerfile: Dockerfile
     container_name: paperless-batchProcessor
     volumes:

@@ -1,7 +1,7 @@
 ﻿using log4net;
 using Paperless.BatchProcessor.DAL;
 using Paperless.BatchProcessor.Services.Records;
-using Paperless.DAL.Repositories;
+using Paperless.BatchProcessor.DAL.Repositories;
 using System.Xml.Linq;
 
 namespace Paperless.BatchProcessor.Services

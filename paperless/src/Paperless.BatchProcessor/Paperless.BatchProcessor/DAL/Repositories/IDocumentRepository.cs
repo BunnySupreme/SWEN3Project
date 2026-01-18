@@ -1,7 +1,4 @@
-﻿using Paperless.DAL.Models;
-using System;
-
-namespace Paperless.DAL.Repositories;
+﻿namespace Paperless.BatchProcessor.DAL.Repositories;
 
 public interface IDocumentRepository
 {

@@ -1,5 +1,8 @@
 using log4net;
 using log4net.Config;
+using Microsoft.EntityFrameworkCore;
+using Paperless.BatchProcessor.DAL;
+using Paperless.BatchProcessor.DAL.Repositories;
 using Paperless.BatchProcessor.Services;
 using Paperless.BatchProcessor.Workers;
 
@@ -18,6 +21,15 @@ programLogger.Info("=== Batch Processor Application Building ===");
 
 // Builder
 var builder = Host.CreateApplicationBuilder(args);
+
+// DB Configuration
+builder.Services.AddDbContext<DataContext>(options =>
+{
+    options.UseNpgsql(Configuration.PostgresConnectionString);
+});
+
+// Repositories
+builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
 
 // XML Processor Service
 builder.Services.AddScoped<IXmlProcessorService, XmlProcessorService>();
